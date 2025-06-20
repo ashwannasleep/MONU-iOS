@@ -1,0 +1,520 @@
+# this is an auto generated file. This will be overwritten
+
+subscription OnCreateBucketItem(
+  $filter: ModelSubscriptionBucketItemFilterInput
+  $owner: String
+) {
+  onCreateBucketItem(filter: $filter, owner: $owner) {
+    id
+    text
+    category
+    date
+    link
+    done
+    owner
+    createdAt
+    updatedAt
+    __typename
+  }
+}
+
+subscription OnUpdateBucketItem(
+  $filter: ModelSubscriptionBucketItemFilterInput
+  $owner: String
+) {
+  onUpdateBucketItem(filter: $filter, owner: $owner) {
+    id
+    text
+    category
+    date
+    link
+    done
+    owner
+    createdAt
+    updatedAt
+    __typename
+  }
+}
+
+subscription OnDeleteBucketItem(
+  $filter: ModelSubscriptionBucketItemFilterInput
+  $owner: String
+) {
+  onDeleteBucketItem(filter: $filter, owner: $owner) {
+    id
+    text
+    category
+    date
+    link
+    done
+    owner
+    createdAt
+    updatedAt
+    __typename
+  }
+}
+
+subscription OnCreateYearlyGoal(
+  $filter: ModelSubscriptionYearlyGoalFilterInput
+  $owner: String
+) {
+  onCreateYearlyGoal(filter: $filter, owner: $owner) {
+    id
+    year
+    title
+    details
+    order
+    done
+    owner
+    createdAt
+    updatedAt
+    __typename
+  }
+}
+
+subscription OnUpdateYearlyGoal(
+  $filter: ModelSubscriptionYearlyGoalFilterInput
+  $owner: String
+) {
+  onUpdateYearlyGoal(filter: $filter, owner: $owner) {
+    id
+    year
+    title
+    details
+    order
+    done
+    owner
+    createdAt
+    updatedAt
+    __typename
+  }
+}
+
+subscription OnDeleteYearlyGoal(
+  $filter: ModelSubscriptionYearlyGoalFilterInput
+  $owner: String
+) {
+  onDeleteYearlyGoal(filter: $filter, owner: $owner) {
+    id
+    year
+    title
+    details
+    order
+    done
+    owner
+    createdAt
+    updatedAt
+    __typename
+  }
+}
+
+subscription OnCreateDailyTask(
+  $filter: ModelSubscriptionDailyTaskFilterInput
+  $owner: String
+) {
+  onCreateDailyTask(filter: $filter, owner: $owner) {
+    id
+    date
+    text
+    time
+    duration
+    order
+    done
+    owner
+    createdAt
+    updatedAt
+    __typename
+  }
+}
+
+subscription OnUpdateDailyTask(
+  $filter: ModelSubscriptionDailyTaskFilterInput
+  $owner: String
+) {
+  onUpdateDailyTask(filter: $filter, owner: $owner) {
+    id
+    date
+    text
+    time
+    duration
+    order
+    done
+    owner
+    createdAt
+    updatedAt
+    __typename
+  }
+}
+
+subscription OnDeleteDailyTask(
+  $filter: ModelSubscriptionDailyTaskFilterInput
+  $owner: String
+) {
+  onDeleteDailyTask(filter: $filter, owner: $owner) {
+    id
+    date
+    text
+    time
+    duration
+    order
+    done
+    owner
+    createdAt
+    updatedAt
+    __typename
+  }
+}
+
+subscription OnCreateHabit(
+  $filter: ModelSubscriptionHabitFilterInput
+  $owner: String
+) {
+  onCreateHabit(filter: $filter, owner: $owner) {
+    id
+    name
+    icon
+    mood
+    days
+    description
+    time
+    plan
+    log
+    color
+    owner
+    createdAt
+    updatedAt
+    __typename
+  }
+}
+
+subscription OnUpdateHabit(
+  $filter: ModelSubscriptionHabitFilterInput
+  $owner: String
+) {
+  onUpdateHabit(filter: $filter, owner: $owner) {
+    id
+    name
+    icon
+    mood
+    days
+    description
+    time
+    plan
+    log
+    color
+    owner
+    createdAt
+    updatedAt
+    __typename
+  }
+}
+
+subscription OnDeleteHabit(
+  $filter: ModelSubscriptionHabitFilterInput
+  $owner: String
+) {
+  onDeleteHabit(filter: $filter, owner: $owner) {
+    id
+    name
+    icon
+    mood
+    days
+    description
+    time
+    plan
+    log
+    color
+    owner
+    createdAt
+    updatedAt
+    __typename
+  }
+}
+
+subscription OnCreateFutureGoal(
+  $filter: ModelSubscriptionFutureGoalFilterInput
+  $owner: String
+) {
+  onCreateFutureGoal(filter: $filter, owner: $owner) {
+    id
+    category
+    title
+    done
+    owner
+    createdAt
+    updatedAt
+    __typename
+  }
+}
+
+subscription OnUpdateFutureGoal(
+  $filter: ModelSubscriptionFutureGoalFilterInput
+  $owner: String
+) {
+  onUpdateFutureGoal(filter: $filter, owner: $owner) {
+    id
+    category
+    title
+    done
+    owner
+    createdAt
+    updatedAt
+    __typename
+  }
+}
+
+subscription OnDeleteFutureGoal(
+  $filter: ModelSubscriptionFutureGoalFilterInput
+  $owner: String
+) {
+  onDeleteFutureGoal(filter: $filter, owner: $owner) {
+    id
+    category
+    title
+    done
+    owner
+    createdAt
+    updatedAt
+    __typename
+  }
+}
+
+subscription OnCreateYearlyPopupTask(
+  $filter: ModelSubscriptionYearlyPopupTaskFilterInput
+  $owner: String
+) {
+  onCreateYearlyPopupTask(filter: $filter, owner: $owner) {
+    id
+    month
+    title
+    date
+    time
+    done
+    owner
+    createdAt
+    updatedAt
+    __typename
+  }
+}
+
+subscription OnUpdateYearlyPopupTask(
+  $filter: ModelSubscriptionYearlyPopupTaskFilterInput
+  $owner: String
+) {
+  onUpdateYearlyPopupTask(filter: $filter, owner: $owner) {
+    id
+    month
+    title
+    date
+    time
+    done
+    owner
+    createdAt
+    updatedAt
+    __typename
+  }
+}
+
+subscription OnDeleteYearlyPopupTask(
+  $filter: ModelSubscriptionYearlyPopupTaskFilterInput
+  $owner: String
+) {
+  onDeleteYearlyPopupTask(filter: $filter, owner: $owner) {
+    id
+    month
+    title
+    date
+    time
+    done
+    owner
+    createdAt
+    updatedAt
+    __typename
+  }
+}
+
+subscription OnCreateFocusTask(
+  $filter: ModelSubscriptionFocusTaskFilterInput
+  $owner: String
+) {
+  onCreateFocusTask(filter: $filter, owner: $owner) {
+    id
+    title
+    date
+    done
+    owner
+    createdAt
+    updatedAt
+    __typename
+  }
+}
+
+subscription OnUpdateFocusTask(
+  $filter: ModelSubscriptionFocusTaskFilterInput
+  $owner: String
+) {
+  onUpdateFocusTask(filter: $filter, owner: $owner) {
+    id
+    title
+    date
+    done
+    owner
+    createdAt
+    updatedAt
+    __typename
+  }
+}
+
+subscription OnDeleteFocusTask(
+  $filter: ModelSubscriptionFocusTaskFilterInput
+  $owner: String
+) {
+  onDeleteFocusTask(filter: $filter, owner: $owner) {
+    id
+    title
+    date
+    done
+    owner
+    createdAt
+    updatedAt
+    __typename
+  }
+}
+
+subscription OnCreateMonthlyEvent(
+  $filter: ModelSubscriptionMonthlyEventFilterInput
+  $owner: String
+) {
+  onCreateMonthlyEvent(filter: $filter, owner: $owner) {
+    id
+    title
+    start
+    end
+    owner
+    createdAt
+    updatedAt
+    __typename
+  }
+}
+
+subscription OnUpdateMonthlyEvent(
+  $filter: ModelSubscriptionMonthlyEventFilterInput
+  $owner: String
+) {
+  onUpdateMonthlyEvent(filter: $filter, owner: $owner) {
+    id
+    title
+    start
+    end
+    owner
+    createdAt
+    updatedAt
+    __typename
+  }
+}
+
+subscription OnDeleteMonthlyEvent(
+  $filter: ModelSubscriptionMonthlyEventFilterInput
+  $owner: String
+) {
+  onDeleteMonthlyEvent(filter: $filter, owner: $owner) {
+    id
+    title
+    start
+    end
+    owner
+    createdAt
+    updatedAt
+    __typename
+  }
+}
+
+subscription OnCreateGoogleAuth(
+  $filter: ModelSubscriptionGoogleAuthFilterInput
+  $owner: String
+) {
+  onCreateGoogleAuth(filter: $filter, owner: $owner) {
+    id
+    token
+    owner
+    createdAt
+    updatedAt
+    __typename
+  }
+}
+
+subscription OnUpdateGoogleAuth(
+  $filter: ModelSubscriptionGoogleAuthFilterInput
+  $owner: String
+) {
+  onUpdateGoogleAuth(filter: $filter, owner: $owner) {
+    id
+    token
+    owner
+    createdAt
+    updatedAt
+    __typename
+  }
+}
+
+subscription OnDeleteGoogleAuth(
+  $filter: ModelSubscriptionGoogleAuthFilterInput
+  $owner: String
+) {
+  onDeleteGoogleAuth(filter: $filter, owner: $owner) {
+    id
+    token
+    owner
+    createdAt
+    updatedAt
+    __typename
+  }
+}
+
+subscription OnCreateUserSettings(
+  $filter: ModelSubscriptionUserSettingsFilterInput
+  $owner: String
+) {
+  onCreateUserSettings(filter: $filter, owner: $owner) {
+    id
+    googleToken
+    isSynced
+    theme
+    owner
+    createdAt
+    updatedAt
+    __typename
+  }
+}
+
+subscription OnUpdateUserSettings(
+  $filter: ModelSubscriptionUserSettingsFilterInput
+  $owner: String
+) {
+  onUpdateUserSettings(filter: $filter, owner: $owner) {
+    id
+    googleToken
+    isSynced
+    theme
+    owner
+    createdAt
+    updatedAt
+    __typename
+  }
+}
+
+subscription OnDeleteUserSettings(
+  $filter: ModelSubscriptionUserSettingsFilterInput
+  $owner: String
+) {
+  onDeleteUserSettings(filter: $filter, owner: $owner) {
+    id
+    googleToken
+    isSynced
+    theme
+    owner
+    createdAt
+    updatedAt
+    __typename
+  }
+}

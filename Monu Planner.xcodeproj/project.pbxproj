@@ -1,0 +1,779 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		02BF3B08AF008787624AC164 /* awsconfiguration.json in Resources */ = {isa = PBXBuildFile; fileRef = 1A24BB550FDA0CCC5AE7B558 /* awsconfiguration.json */; };
+		064AB0D7830BE6648A5294F2 /* FutureGoal.swift in Sources */ = {isa = PBXBuildFile; fileRef = 625DD89A576EE1A5D753B90D /* FutureGoal.swift */; };
+		1118237031E466D913CE0A16 /* MonthlyEvent+Schema.swift in Sources */ = {isa = PBXBuildFile; fileRef = F87DB226E7156AD56B4A37F2 /* MonthlyEvent+Schema.swift */; };
+		1BF61B333322E58402C9D588 /* Habit.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6E328CB7D32C40C1F07B543 /* Habit.swift */; };
+		1E687EE5168C5294ECEC603D /* YearlyPopupTask.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0A4E95BDA71CD8577CD96C3 /* YearlyPopupTask.swift */; };
+		20D61C6C3A50FFEDD7720554 /* YearlyGoal.swift in Sources */ = {isa = PBXBuildFile; fileRef = B33624F5D5E013F603764BFB /* YearlyGoal.swift */; };
+		406D0F0CA5E072F8CBC9FCEA /* UserSettings+Schema.swift in Sources */ = {isa = PBXBuildFile; fileRef = 199501936DB4534608433E86 /* UserSettings+Schema.swift */; };
+		44A0D6778AD1E42FC3D99822 /* AmplifyModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1728E7198561F506A2306947 /* AmplifyModels.swift */; };
+		5248A3DF951EE773B078F154 /* MonthlyEvent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3318675AFBA73771ADF6D64F /* MonthlyEvent.swift */; };
+		5B5400D5B2B3B431B23AE5A8 /* GoogleAuth+Schema.swift in Sources */ = {isa = PBXBuildFile; fileRef = 165C7C343F7AB1DA25999A1D /* GoogleAuth+Schema.swift */; };
+		67BA8FB8ACAB4CC60B18F264 /* BucketItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FD99DEBCDAF0E853F088936 /* BucketItem.swift */; };
+		7325F64AA1369249E8F07D1A /* BucketItem+Schema.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4079004BE88F70D7BF672133 /* BucketItem+Schema.swift */; };
+		74F84A39084F6390DE22037D /* DailyTask.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93D2C6623F34B509369CCDAB /* DailyTask.swift */; };
+		7B9A6FCB70F147AE85C0560A /* amplifyconfiguration.json in Resources */ = {isa = PBXBuildFile; fileRef = 9033C0170502D817AB4C7A1E /* amplifyconfiguration.json */; };
+		97D8002D76E7EB1308EE8DBB /* DailyTask+Schema.swift in Sources */ = {isa = PBXBuildFile; fileRef = 34D87E35F34EE024BAD9F092 /* DailyTask+Schema.swift */; };
+		AA2EFCD82E42DFE80098E3BB /* AWSAPIPlugin in Frameworks */ = {isa = PBXBuildFile; productRef = AA2EFCD72E42DFE80098E3BB /* AWSAPIPlugin */; };
+		AA2EFCDA2E42DFE80098E3BB /* AWSCognitoAuthPlugin in Frameworks */ = {isa = PBXBuildFile; productRef = AA2EFCD92E42DFE80098E3BB /* AWSCognitoAuthPlugin */; };
+		AA2EFCDC2E42E0DD0098E3BB /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = AA2EFCDB2E42E0DD0098E3BB /* GoogleSignIn */; };
+		C14AAAF663C515F4BD9497A2 /* UserSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56FDDDAECEC29E17E67245B3 /* UserSettings.swift */; };
+		C509B6973CF2B5C42B2BC60A /* Habit+Schema.swift in Sources */ = {isa = PBXBuildFile; fileRef = 302FA8DC3B9AF648A5707D90 /* Habit+Schema.swift */; };
+		CAE8F3D1A6690386079412A1 /* YearlyGoal+Schema.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F1CF11F938D3F885F440DCA /* YearlyGoal+Schema.swift */; };
+		CFCAECD9012925AA27B2F790 /* FutureGoal+Schema.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8B27DB8967E9E44691524C9 /* FutureGoal+Schema.swift */; };
+		D2C5C88E8C88C6B4EFF7D4DB /* YearlyPopupTask+Schema.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6099A74EC3CB6B4E8E0E4EB8 /* YearlyPopupTask+Schema.swift */; };
+		DA398AB223AD339BD13D33AA /* GoogleAuth.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92A81FF03E31868E7D672001 /* GoogleAuth.swift */; };
+		DCB49C40EFE884279A5656A3 /* FocusTask.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F1734C4C7E49225E4875D0B /* FocusTask.swift */; };
+		EA1E0A877E15B8DE1FBA3FB0 /* FocusTask+Schema.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2592EC73904A029EC7A97A00 /* FocusTask+Schema.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		AA298B462E05F65900311F1F /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = AA298B2F2E05F65900311F1F /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = AA298B362E05F65900311F1F;
+			remoteInfo = "Monu Planner";
+		};
+		AA298B502E05F65900311F1F /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = AA298B2F2E05F65900311F1F /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = AA298B362E05F65900311F1F;
+			remoteInfo = "Monu Planner";
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		165C7C343F7AB1DA25999A1D /* GoogleAuth+Schema.swift */ = {isa = PBXFileReference; explicitFileType = sourcecode.swift; name = "GoogleAuth+Schema.swift"; path = "amplify/generated/models/GoogleAuth+Schema.swift"; sourceTree = "<group>"; };
+		1728E7198561F506A2306947 /* AmplifyModels.swift */ = {isa = PBXFileReference; explicitFileType = sourcecode.swift; name = AmplifyModels.swift; path = amplify/generated/models/AmplifyModels.swift; sourceTree = "<group>"; };
+		199501936DB4534608433E86 /* UserSettings+Schema.swift */ = {isa = PBXFileReference; explicitFileType = sourcecode.swift; name = "UserSettings+Schema.swift"; path = "amplify/generated/models/UserSettings+Schema.swift"; sourceTree = "<group>"; };
+		1A24BB550FDA0CCC5AE7B558 /* awsconfiguration.json */ = {isa = PBXFileReference; explicitFileType = text.json; path = awsconfiguration.json; sourceTree = "<group>"; };
+		2592EC73904A029EC7A97A00 /* FocusTask+Schema.swift */ = {isa = PBXFileReference; explicitFileType = sourcecode.swift; name = "FocusTask+Schema.swift"; path = "amplify/generated/models/FocusTask+Schema.swift"; sourceTree = "<group>"; };
+		2FD99DEBCDAF0E853F088936 /* BucketItem.swift */ = {isa = PBXFileReference; explicitFileType = sourcecode.swift; name = BucketItem.swift; path = amplify/generated/models/BucketItem.swift; sourceTree = "<group>"; };
+		302FA8DC3B9AF648A5707D90 /* Habit+Schema.swift */ = {isa = PBXFileReference; explicitFileType = sourcecode.swift; name = "Habit+Schema.swift"; path = "amplify/generated/models/Habit+Schema.swift"; sourceTree = "<group>"; };
+		3318675AFBA73771ADF6D64F /* MonthlyEvent.swift */ = {isa = PBXFileReference; explicitFileType = sourcecode.swift; name = MonthlyEvent.swift; path = amplify/generated/models/MonthlyEvent.swift; sourceTree = "<group>"; };
+		34D87E35F34EE024BAD9F092 /* DailyTask+Schema.swift */ = {isa = PBXFileReference; explicitFileType = sourcecode.swift; name = "DailyTask+Schema.swift"; path = "amplify/generated/models/DailyTask+Schema.swift"; sourceTree = "<group>"; };
+		3F1CF11F938D3F885F440DCA /* YearlyGoal+Schema.swift */ = {isa = PBXFileReference; explicitFileType = sourcecode.swift; name = "YearlyGoal+Schema.swift"; path = "amplify/generated/models/YearlyGoal+Schema.swift"; sourceTree = "<group>"; };
+		4079004BE88F70D7BF672133 /* BucketItem+Schema.swift */ = {isa = PBXFileReference; explicitFileType = sourcecode.swift; name = "BucketItem+Schema.swift"; path = "amplify/generated/models/BucketItem+Schema.swift"; sourceTree = "<group>"; };
+		4F1734C4C7E49225E4875D0B /* FocusTask.swift */ = {isa = PBXFileReference; explicitFileType = sourcecode.swift; name = FocusTask.swift; path = amplify/generated/models/FocusTask.swift; sourceTree = "<group>"; };
+		56FDDDAECEC29E17E67245B3 /* UserSettings.swift */ = {isa = PBXFileReference; explicitFileType = sourcecode.swift; name = UserSettings.swift; path = amplify/generated/models/UserSettings.swift; sourceTree = "<group>"; };
+		6099A74EC3CB6B4E8E0E4EB8 /* YearlyPopupTask+Schema.swift */ = {isa = PBXFileReference; explicitFileType = sourcecode.swift; name = "YearlyPopupTask+Schema.swift"; path = "amplify/generated/models/YearlyPopupTask+Schema.swift"; sourceTree = "<group>"; };
+		625DD89A576EE1A5D753B90D /* FutureGoal.swift */ = {isa = PBXFileReference; explicitFileType = sourcecode.swift; name = FutureGoal.swift; path = amplify/generated/models/FutureGoal.swift; sourceTree = "<group>"; };
+		9033C0170502D817AB4C7A1E /* amplifyconfiguration.json */ = {isa = PBXFileReference; explicitFileType = text.json; path = amplifyconfiguration.json; sourceTree = "<group>"; };
+		92A81FF03E31868E7D672001 /* GoogleAuth.swift */ = {isa = PBXFileReference; explicitFileType = sourcecode.swift; name = GoogleAuth.swift; path = amplify/generated/models/GoogleAuth.swift; sourceTree = "<group>"; };
+		93D2C6623F34B509369CCDAB /* DailyTask.swift */ = {isa = PBXFileReference; explicitFileType = sourcecode.swift; name = DailyTask.swift; path = amplify/generated/models/DailyTask.swift; sourceTree = "<group>"; };
+		AA298B372E05F65900311F1F /* Monu Planner.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Monu Planner.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		AA298B452E05F65900311F1F /* Monu PlannerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Monu PlannerTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		AA298B4F2E05F65900311F1F /* Monu PlannerUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Monu PlannerUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		B33624F5D5E013F603764BFB /* YearlyGoal.swift */ = {isa = PBXFileReference; explicitFileType = sourcecode.swift; name = YearlyGoal.swift; path = amplify/generated/models/YearlyGoal.swift; sourceTree = "<group>"; };
+		B6E328CB7D32C40C1F07B543 /* Habit.swift */ = {isa = PBXFileReference; explicitFileType = sourcecode.swift; name = Habit.swift; path = amplify/generated/models/Habit.swift; sourceTree = "<group>"; };
+		B8B27DB8967E9E44691524C9 /* FutureGoal+Schema.swift */ = {isa = PBXFileReference; explicitFileType = sourcecode.swift; name = "FutureGoal+Schema.swift"; path = "amplify/generated/models/FutureGoal+Schema.swift"; sourceTree = "<group>"; };
+		E0A4E95BDA71CD8577CD96C3 /* YearlyPopupTask.swift */ = {isa = PBXFileReference; explicitFileType = sourcecode.swift; name = YearlyPopupTask.swift; path = amplify/generated/models/YearlyPopupTask.swift; sourceTree = "<group>"; };
+		F87DB226E7156AD56B4A37F2 /* MonthlyEvent+Schema.swift */ = {isa = PBXFileReference; explicitFileType = sourcecode.swift; name = "MonthlyEvent+Schema.swift"; path = "amplify/generated/models/MonthlyEvent+Schema.swift"; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		AA298B392E05F65900311F1F /* Monu Planner */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "Monu Planner";
+			sourceTree = "<group>";
+		};
+		AA298B482E05F65900311F1F /* Monu PlannerTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "Monu PlannerTests";
+			sourceTree = "<group>";
+		};
+		AA298B522E05F65900311F1F /* Monu PlannerUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "Monu PlannerUITests";
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		AA298B342E05F65900311F1F /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AA2EFCD82E42DFE80098E3BB /* AWSAPIPlugin in Frameworks */,
+				AA2EFCDA2E42DFE80098E3BB /* AWSCognitoAuthPlugin in Frameworks */,
+				AA2EFCDC2E42E0DD0098E3BB /* GoogleSignIn in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AA298B422E05F65900311F1F /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AA298B4C2E05F65900311F1F /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		06EB45353F2698D584D7DDB6 /* AmplifyModels */ = {
+			isa = PBXGroup;
+			children = (
+				1728E7198561F506A2306947 /* AmplifyModels.swift */,
+				4079004BE88F70D7BF672133 /* BucketItem+Schema.swift */,
+				2FD99DEBCDAF0E853F088936 /* BucketItem.swift */,
+				34D87E35F34EE024BAD9F092 /* DailyTask+Schema.swift */,
+				93D2C6623F34B509369CCDAB /* DailyTask.swift */,
+				2592EC73904A029EC7A97A00 /* FocusTask+Schema.swift */,
+				4F1734C4C7E49225E4875D0B /* FocusTask.swift */,
+				B8B27DB8967E9E44691524C9 /* FutureGoal+Schema.swift */,
+				625DD89A576EE1A5D753B90D /* FutureGoal.swift */,
+				165C7C343F7AB1DA25999A1D /* GoogleAuth+Schema.swift */,
+				92A81FF03E31868E7D672001 /* GoogleAuth.swift */,
+				302FA8DC3B9AF648A5707D90 /* Habit+Schema.swift */,
+				B6E328CB7D32C40C1F07B543 /* Habit.swift */,
+				F87DB226E7156AD56B4A37F2 /* MonthlyEvent+Schema.swift */,
+				3318675AFBA73771ADF6D64F /* MonthlyEvent.swift */,
+				199501936DB4534608433E86 /* UserSettings+Schema.swift */,
+				56FDDDAECEC29E17E67245B3 /* UserSettings.swift */,
+				3F1CF11F938D3F885F440DCA /* YearlyGoal+Schema.swift */,
+				B33624F5D5E013F603764BFB /* YearlyGoal.swift */,
+				6099A74EC3CB6B4E8E0E4EB8 /* YearlyPopupTask+Schema.swift */,
+				E0A4E95BDA71CD8577CD96C3 /* YearlyPopupTask.swift */,
+			);
+			name = AmplifyModels;
+			sourceTree = "<group>";
+		};
+		AA298B2E2E05F65900311F1F = {
+			isa = PBXGroup;
+			children = (
+				AA298B392E05F65900311F1F /* Monu Planner */,
+				AA298B482E05F65900311F1F /* Monu PlannerTests */,
+				AA298B522E05F65900311F1F /* Monu PlannerUITests */,
+				AA298B382E05F65900311F1F /* Products */,
+				E4CBC952D93DAD69CF9369AF /* AmplifyConfig */,
+				06EB45353F2698D584D7DDB6 /* AmplifyModels */,
+				AAB790612E42BDFA00CCC49C /* Frameworks */,
+			);
+			sourceTree = "<group>";
+		};
+		AA298B382E05F65900311F1F /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				AA298B372E05F65900311F1F /* Monu Planner.app */,
+				AA298B452E05F65900311F1F /* Monu PlannerTests.xctest */,
+				AA298B4F2E05F65900311F1F /* Monu PlannerUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		AAB790612E42BDFA00CCC49C /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		E4CBC952D93DAD69CF9369AF /* AmplifyConfig */ = {
+			isa = PBXGroup;
+			children = (
+				1A24BB550FDA0CCC5AE7B558 /* awsconfiguration.json */,
+				9033C0170502D817AB4C7A1E /* amplifyconfiguration.json */,
+			);
+			name = AmplifyConfig;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		AA298B362E05F65900311F1F /* Monu Planner */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AA298B592E05F65900311F1F /* Build configuration list for PBXNativeTarget "Monu Planner" */;
+			buildPhases = (
+				AA298B332E05F65900311F1F /* Sources */,
+				AA298B342E05F65900311F1F /* Frameworks */,
+				AA298B352E05F65900311F1F /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				AA298B392E05F65900311F1F /* Monu Planner */,
+			);
+			name = "Monu Planner";
+			packageProductDependencies = (
+				AA2EFCD72E42DFE80098E3BB /* AWSAPIPlugin */,
+				AA2EFCD92E42DFE80098E3BB /* AWSCognitoAuthPlugin */,
+				AA2EFCDB2E42E0DD0098E3BB /* GoogleSignIn */,
+			);
+			productName = "Monu Planner";
+			productReference = AA298B372E05F65900311F1F /* Monu Planner.app */;
+			productType = "com.apple.product-type.application";
+		};
+		AA298B442E05F65900311F1F /* Monu PlannerTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AA298B5C2E05F65900311F1F /* Build configuration list for PBXNativeTarget "Monu PlannerTests" */;
+			buildPhases = (
+				AA298B412E05F65900311F1F /* Sources */,
+				AA298B422E05F65900311F1F /* Frameworks */,
+				AA298B432E05F65900311F1F /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				AA298B472E05F65900311F1F /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				AA298B482E05F65900311F1F /* Monu PlannerTests */,
+			);
+			name = "Monu PlannerTests";
+			packageProductDependencies = (
+			);
+			productName = "Monu PlannerTests";
+			productReference = AA298B452E05F65900311F1F /* Monu PlannerTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		AA298B4E2E05F65900311F1F /* Monu PlannerUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AA298B5F2E05F65900311F1F /* Build configuration list for PBXNativeTarget "Monu PlannerUITests" */;
+			buildPhases = (
+				AA298B4B2E05F65900311F1F /* Sources */,
+				AA298B4C2E05F65900311F1F /* Frameworks */,
+				AA298B4D2E05F65900311F1F /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				AA298B512E05F65900311F1F /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				AA298B522E05F65900311F1F /* Monu PlannerUITests */,
+			);
+			name = "Monu PlannerUITests";
+			packageProductDependencies = (
+			);
+			productName = "Monu PlannerUITests";
+			productReference = AA298B4F2E05F65900311F1F /* Monu PlannerUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		AA298B2F2E05F65900311F1F /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1640;
+				LastUpgradeCheck = 1640;
+				TargetAttributes = {
+					AA298B362E05F65900311F1F = {
+						CreatedOnToolsVersion = 16.4;
+					};
+					AA298B442E05F65900311F1F = {
+						CreatedOnToolsVersion = 16.4;
+						TestTargetID = AA298B362E05F65900311F1F;
+					};
+					AA298B4E2E05F65900311F1F = {
+						CreatedOnToolsVersion = 16.4;
+						TestTargetID = AA298B362E05F65900311F1F;
+					};
+				};
+			};
+			buildConfigurationList = AA298B322E05F65900311F1F /* Build configuration list for PBXProject "Monu Planner" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = AA298B2E2E05F65900311F1F;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				AAB7905C2E42B97000CCC49C /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
+				AA2EFCD62E42DFE80098E3BB /* XCRemoteSwiftPackageReference "amplify-swift" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = AA298B382E05F65900311F1F /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				AA298B362E05F65900311F1F /* Monu Planner */,
+				AA298B442E05F65900311F1F /* Monu PlannerTests */,
+				AA298B4E2E05F65900311F1F /* Monu PlannerUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		AA298B352E05F65900311F1F /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				02BF3B08AF008787624AC164 /* awsconfiguration.json in Resources */,
+				7B9A6FCB70F147AE85C0560A /* amplifyconfiguration.json in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AA298B432E05F65900311F1F /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AA298B4D2E05F65900311F1F /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		AA298B332E05F65900311F1F /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				44A0D6778AD1E42FC3D99822 /* AmplifyModels.swift in Sources */,
+				7325F64AA1369249E8F07D1A /* BucketItem+Schema.swift in Sources */,
+				67BA8FB8ACAB4CC60B18F264 /* BucketItem.swift in Sources */,
+				97D8002D76E7EB1308EE8DBB /* DailyTask+Schema.swift in Sources */,
+				74F84A39084F6390DE22037D /* DailyTask.swift in Sources */,
+				EA1E0A877E15B8DE1FBA3FB0 /* FocusTask+Schema.swift in Sources */,
+				DCB49C40EFE884279A5656A3 /* FocusTask.swift in Sources */,
+				CFCAECD9012925AA27B2F790 /* FutureGoal+Schema.swift in Sources */,
+				064AB0D7830BE6648A5294F2 /* FutureGoal.swift in Sources */,
+				5B5400D5B2B3B431B23AE5A8 /* GoogleAuth+Schema.swift in Sources */,
+				DA398AB223AD339BD13D33AA /* GoogleAuth.swift in Sources */,
+				C509B6973CF2B5C42B2BC60A /* Habit+Schema.swift in Sources */,
+				1BF61B333322E58402C9D588 /* Habit.swift in Sources */,
+				1118237031E466D913CE0A16 /* MonthlyEvent+Schema.swift in Sources */,
+				5248A3DF951EE773B078F154 /* MonthlyEvent.swift in Sources */,
+				406D0F0CA5E072F8CBC9FCEA /* UserSettings+Schema.swift in Sources */,
+				C14AAAF663C515F4BD9497A2 /* UserSettings.swift in Sources */,
+				CAE8F3D1A6690386079412A1 /* YearlyGoal+Schema.swift in Sources */,
+				20D61C6C3A50FFEDD7720554 /* YearlyGoal.swift in Sources */,
+				D2C5C88E8C88C6B4EFF7D4DB /* YearlyPopupTask+Schema.swift in Sources */,
+				1E687EE5168C5294ECEC603D /* YearlyPopupTask.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AA298B412E05F65900311F1F /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AA298B4B2E05F65900311F1F /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		AA298B472E05F65900311F1F /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = AA298B362E05F65900311F1F /* Monu Planner */;
+			targetProxy = AA298B462E05F65900311F1F /* PBXContainerItemProxy */;
+		};
+		AA298B512E05F65900311F1F /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = AA298B362E05F65900311F1F /* Monu Planner */;
+			targetProxy = AA298B502E05F65900311F1F /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		AA298B572E05F65900311F1F /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = 7Z45F36LFG;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		AA298B582E05F65900311F1F /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = 7Z45F36LFG;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
+			};
+			name = Release;
+		};
+		AA298B5A2E05F65900311F1F /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "Monu Planner/Monu_Planner.entitlements";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
+				DEVELOPMENT_TEAM = 7Z45F36LFG;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleURLTypes = "{\n    CFBundleTypeRole = Editor;\n    CFBundleURLSchemes =     (\n        \"com.googleusercontent.apps.632636220479-va5ia9h1850mlu545rjiejrhm3aq283g\"\n    );\n}";
+				INFOPLIST_KEY_GIDClientID = "632636220479-va5ia9h1850mlu545rjiejrhm3aq283g.apps.googleusercontent.com";
+				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
+				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
+				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
+				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphonesimulator*]" = YES;
+				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphoneos*]" = YES;
+				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphonesimulator*]" = YES;
+				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphoneos*]" = UIStatusBarStyleDefault;
+				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphonesimulator*]" = UIStatusBarStyleDefault;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
+				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
+				MACOSX_DEPLOYMENT_TARGET = 15.5;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.ashleychang.Monu-Planner";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				SDKROOT = auto;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2,7";
+				XROS_DEPLOYMENT_TARGET = 2.5;
+			};
+			name = Debug;
+		};
+		AA298B5B2E05F65900311F1F /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "Monu Planner/Monu_Planner.entitlements";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
+				DEVELOPMENT_TEAM = 7Z45F36LFG;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleURLTypes = "{\n    CFBundleTypeRole = Editor;\n    CFBundleURLSchemes =     (\n        \"com.googleusercontent.apps.632636220479-va5ia9h1850mlu545rjiejrhm3aq283g\"\n    );\n}";
+				INFOPLIST_KEY_GIDClientID = "632636220479-va5ia9h1850mlu545rjiejrhm3aq283g.apps.googleusercontent.com";
+				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
+				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
+				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
+				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphonesimulator*]" = YES;
+				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphoneos*]" = YES;
+				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphonesimulator*]" = YES;
+				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphoneos*]" = UIStatusBarStyleDefault;
+				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphonesimulator*]" = UIStatusBarStyleDefault;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
+				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
+				MACOSX_DEPLOYMENT_TARGET = 15.5;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.ashleychang.Monu-Planner";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				SDKROOT = auto;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2,7";
+				XROS_DEPLOYMENT_TARGET = 2.5;
+			};
+			name = Release;
+		};
+		AA298B5D2E05F65900311F1F /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
+				DEVELOPMENT_TEAM = 7Z45F36LFG;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				MACOSX_DEPLOYMENT_TARGET = 15.5;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.ashleychang.Monu-PlannerTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = auto;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2,7";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Monu Planner.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Monu Planner";
+				XROS_DEPLOYMENT_TARGET = 2.5;
+			};
+			name = Debug;
+		};
+		AA298B5E2E05F65900311F1F /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
+				DEVELOPMENT_TEAM = 7Z45F36LFG;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				MACOSX_DEPLOYMENT_TARGET = 15.5;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.ashleychang.Monu-PlannerTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = auto;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2,7";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Monu Planner.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Monu Planner";
+				XROS_DEPLOYMENT_TARGET = 2.5;
+			};
+			name = Release;
+		};
+		AA298B602E05F65900311F1F /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
+				DEVELOPMENT_TEAM = 7Z45F36LFG;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				MACOSX_DEPLOYMENT_TARGET = 15.5;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.ashleychang.Monu-PlannerUITests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = auto;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2,7";
+				TEST_TARGET_NAME = "Monu Planner";
+				XROS_DEPLOYMENT_TARGET = 2.5;
+			};
+			name = Debug;
+		};
+		AA298B612E05F65900311F1F /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
+				DEVELOPMENT_TEAM = 7Z45F36LFG;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				MACOSX_DEPLOYMENT_TARGET = 15.5;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.ashleychang.Monu-PlannerUITests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = auto;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2,7";
+				TEST_TARGET_NAME = "Monu Planner";
+				XROS_DEPLOYMENT_TARGET = 2.5;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		AA298B322E05F65900311F1F /* Build configuration list for PBXProject "Monu Planner" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AA298B572E05F65900311F1F /* Debug */,
+				AA298B582E05F65900311F1F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		AA298B592E05F65900311F1F /* Build configuration list for PBXNativeTarget "Monu Planner" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AA298B5A2E05F65900311F1F /* Debug */,
+				AA298B5B2E05F65900311F1F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		AA298B5C2E05F65900311F1F /* Build configuration list for PBXNativeTarget "Monu PlannerTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AA298B5D2E05F65900311F1F /* Debug */,
+				AA298B5E2E05F65900311F1F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		AA298B5F2E05F65900311F1F /* Build configuration list for PBXNativeTarget "Monu PlannerUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AA298B602E05F65900311F1F /* Debug */,
+				AA298B612E05F65900311F1F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		AA2EFCD62E42DFE80098E3BB /* XCRemoteSwiftPackageReference "amplify-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/aws-amplify/amplify-swift";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.0.0;
+			};
+		};
+		AAB7905C2E42B97000CCC49C /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/google/GoogleSignIn-iOS";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 9.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		AA2EFCD72E42DFE80098E3BB /* AWSAPIPlugin */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AA2EFCD62E42DFE80098E3BB /* XCRemoteSwiftPackageReference "amplify-swift" */;
+			productName = AWSAPIPlugin;
+		};
+		AA2EFCD92E42DFE80098E3BB /* AWSCognitoAuthPlugin */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AA2EFCD62E42DFE80098E3BB /* XCRemoteSwiftPackageReference "amplify-swift" */;
+			productName = AWSCognitoAuthPlugin;
+		};
+		AA2EFCDB2E42E0DD0098E3BB /* GoogleSignIn */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AAB7905C2E42B97000CCC49C /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+			productName = GoogleSignIn;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = AA298B2F2E05F65900311F1F /* Project object */;
+}

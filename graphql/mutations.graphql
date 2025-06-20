@@ -1,0 +1,520 @@
+# this is an auto generated file. This will be overwritten
+
+mutation CreateBucketItem(
+  $input: CreateBucketItemInput!
+  $condition: ModelBucketItemConditionInput
+) {
+  createBucketItem(input: $input, condition: $condition) {
+    id
+    text
+    category
+    date
+    link
+    done
+    owner
+    createdAt
+    updatedAt
+    __typename
+  }
+}
+
+mutation UpdateBucketItem(
+  $input: UpdateBucketItemInput!
+  $condition: ModelBucketItemConditionInput
+) {
+  updateBucketItem(input: $input, condition: $condition) {
+    id
+    text
+    category
+    date
+    link
+    done
+    owner
+    createdAt
+    updatedAt
+    __typename
+  }
+}
+
+mutation DeleteBucketItem(
+  $input: DeleteBucketItemInput!
+  $condition: ModelBucketItemConditionInput
+) {
+  deleteBucketItem(input: $input, condition: $condition) {
+    id
+    text
+    category
+    date
+    link
+    done
+    owner
+    createdAt
+    updatedAt
+    __typename
+  }
+}
+
+mutation CreateYearlyGoal(
+  $input: CreateYearlyGoalInput!
+  $condition: ModelYearlyGoalConditionInput
+) {
+  createYearlyGoal(input: $input, condition: $condition) {
+    id
+    year
+    title
+    details
+    order
+    done
+    owner
+    createdAt
+    updatedAt
+    __typename
+  }
+}
+
+mutation UpdateYearlyGoal(
+  $input: UpdateYearlyGoalInput!
+  $condition: ModelYearlyGoalConditionInput
+) {
+  updateYearlyGoal(input: $input, condition: $condition) {
+    id
+    year
+    title
+    details
+    order
+    done
+    owner
+    createdAt
+    updatedAt
+    __typename
+  }
+}
+
+mutation DeleteYearlyGoal(
+  $input: DeleteYearlyGoalInput!
+  $condition: ModelYearlyGoalConditionInput
+) {
+  deleteYearlyGoal(input: $input, condition: $condition) {
+    id
+    year
+    title
+    details
+    order
+    done
+    owner
+    createdAt
+    updatedAt
+    __typename
+  }
+}
+
+mutation CreateDailyTask(
+  $input: CreateDailyTaskInput!
+  $condition: ModelDailyTaskConditionInput
+) {
+  createDailyTask(input: $input, condition: $condition) {
+    id
+    date
+    text
+    time
+    duration
+    order
+    done
+    owner
+    createdAt
+    updatedAt
+    __typename
+  }
+}
+
+mutation UpdateDailyTask(
+  $input: UpdateDailyTaskInput!
+  $condition: ModelDailyTaskConditionInput
+) {
+  updateDailyTask(input: $input, condition: $condition) {
+    id
+    date
+    text
+    time
+    duration
+    order
+    done
+    owner
+    createdAt
+    updatedAt
+    __typename
+  }
+}
+
+mutation DeleteDailyTask(
+  $input: DeleteDailyTaskInput!
+  $condition: ModelDailyTaskConditionInput
+) {
+  deleteDailyTask(input: $input, condition: $condition) {
+    id
+    date
+    text
+    time
+    duration
+    order
+    done
+    owner
+    createdAt
+    updatedAt
+    __typename
+  }
+}
+
+mutation CreateHabit(
+  $input: CreateHabitInput!
+  $condition: ModelHabitConditionInput
+) {
+  createHabit(input: $input, condition: $condition) {
+    id
+    name
+    icon
+    mood
+    days
+    description
+    time
+    plan
+    log
+    color
+    owner
+    createdAt
+    updatedAt
+    __typename
+  }
+}
+
+mutation UpdateHabit(
+  $input: UpdateHabitInput!
+  $condition: ModelHabitConditionInput
+) {
+  updateHabit(input: $input, condition: $condition) {
+    id
+    name
+    icon
+    mood
+    days
+    description
+    time
+    plan
+    log
+    color
+    owner
+    createdAt
+    updatedAt
+    __typename
+  }
+}
+
+mutation DeleteHabit(
+  $input: DeleteHabitInput!
+  $condition: ModelHabitConditionInput
+) {
+  deleteHabit(input: $input, condition: $condition) {
+    id
+    name
+    icon
+    mood
+    days
+    description
+    time
+    plan
+    log
+    color
+    owner
+    createdAt
+    updatedAt
+    __typename
+  }
+}
+
+mutation CreateFutureGoal(
+  $input: CreateFutureGoalInput!
+  $condition: ModelFutureGoalConditionInput
+) {
+  createFutureGoal(input: $input, condition: $condition) {
+    id
+    category
+    title
+    done
+    owner
+    createdAt
+    updatedAt
+    __typename
+  }
+}
+
+mutation UpdateFutureGoal(
+  $input: UpdateFutureGoalInput!
+  $condition: ModelFutureGoalConditionInput
+) {
+  updateFutureGoal(input: $input, condition: $condition) {
+    id
+    category
+    title
+    done
+    owner
+    createdAt
+    updatedAt
+    __typename
+  }
+}
+
+mutation DeleteFutureGoal(
+  $input: DeleteFutureGoalInput!
+  $condition: ModelFutureGoalConditionInput
+) {
+  deleteFutureGoal(input: $input, condition: $condition) {
+    id
+    category
+    title
+    done
+    owner
+    createdAt
+    updatedAt
+    __typename
+  }
+}
+
+mutation CreateYearlyPopupTask(
+  $input: CreateYearlyPopupTaskInput!
+  $condition: ModelYearlyPopupTaskConditionInput
+) {
+  createYearlyPopupTask(input: $input, condition: $condition) {
+    id
+    month
+    title
+    date
+    time
+    done
+    owner
+    createdAt
+    updatedAt
+    __typename
+  }
+}
+
+mutation UpdateYearlyPopupTask(
+  $input: UpdateYearlyPopupTaskInput!
+  $condition: ModelYearlyPopupTaskConditionInput
+) {
+  updateYearlyPopupTask(input: $input, condition: $condition) {
+    id
+    month
+    title
+    date
+    time
+    done
+    owner
+    createdAt
+    updatedAt
+    __typename
+  }
+}
+
+mutation DeleteYearlyPopupTask(
+  $input: DeleteYearlyPopupTaskInput!
+  $condition: ModelYearlyPopupTaskConditionInput
+) {
+  deleteYearlyPopupTask(input: $input, condition: $condition) {
+    id
+    month
+    title
+    date
+    time
+    done
+    owner
+    createdAt
+    updatedAt
+    __typename
+  }
+}
+
+mutation CreateFocusTask(
+  $input: CreateFocusTaskInput!
+  $condition: ModelFocusTaskConditionInput
+) {
+  createFocusTask(input: $input, condition: $condition) {
+    id
+    title
+    date
+    done
+    owner
+    createdAt
+    updatedAt
+    __typename
+  }
+}
+
+mutation UpdateFocusTask(
+  $input: UpdateFocusTaskInput!
+  $condition: ModelFocusTaskConditionInput
+) {
+  updateFocusTask(input: $input, condition: $condition) {
+    id
+    title
+    date
+    done
+    owner
+    createdAt
+    updatedAt
+    __typename
+  }
+}
+
+mutation DeleteFocusTask(
+  $input: DeleteFocusTaskInput!
+  $condition: ModelFocusTaskConditionInput
+) {
+  deleteFocusTask(input: $input, condition: $condition) {
+    id
+    title
+    date
+    done
+    owner
+    createdAt
+    updatedAt
+    __typename
+  }
+}
+
+mutation CreateMonthlyEvent(
+  $input: CreateMonthlyEventInput!
+  $condition: ModelMonthlyEventConditionInput
+) {
+  createMonthlyEvent(input: $input, condition: $condition) {
+    id
+    title
+    start
+    end
+    owner
+    createdAt
+    updatedAt
+    __typename
+  }
+}
+
+mutation UpdateMonthlyEvent(
+  $input: UpdateMonthlyEventInput!
+  $condition: ModelMonthlyEventConditionInput
+) {
+  updateMonthlyEvent(input: $input, condition: $condition) {
+    id
+    title
+    start
+    end
+    owner
+    createdAt
+    updatedAt
+    __typename
+  }
+}
+
+mutation DeleteMonthlyEvent(
+  $input: DeleteMonthlyEventInput!
+  $condition: ModelMonthlyEventConditionInput
+) {
+  deleteMonthlyEvent(input: $input, condition: $condition) {
+    id
+    title
+    start
+    end
+    owner
+    createdAt
+    updatedAt
+    __typename
+  }
+}
+
+mutation CreateGoogleAuth(
+  $input: CreateGoogleAuthInput!
+  $condition: ModelGoogleAuthConditionInput
+) {
+  createGoogleAuth(input: $input, condition: $condition) {
+    id
+    token
+    owner
+    createdAt
+    updatedAt
+    __typename
+  }
+}
+
+mutation UpdateGoogleAuth(
+  $input: UpdateGoogleAuthInput!
+  $condition: ModelGoogleAuthConditionInput
+) {
+  updateGoogleAuth(input: $input, condition: $condition) {
+    id
+    token
+    owner
+    createdAt
+    updatedAt
+    __typename
+  }
+}
+
+mutation DeleteGoogleAuth(
+  $input: DeleteGoogleAuthInput!
+  $condition: ModelGoogleAuthConditionInput
+) {
+  deleteGoogleAuth(input: $input, condition: $condition) {
+    id
+    token
+    owner
+    createdAt
+    updatedAt
+    __typename
+  }
+}
+
+mutation CreateUserSettings(
+  $input: CreateUserSettingsInput!
+  $condition: ModelUserSettingsConditionInput
+) {
+  createUserSettings(input: $input, condition: $condition) {
+    id
+    googleToken
+    isSynced
+    theme
+    owner
+    createdAt
+    updatedAt
+    __typename
+  }
+}
+
+mutation UpdateUserSettings(
+  $input: UpdateUserSettingsInput!
+  $condition: ModelUserSettingsConditionInput
+) {
+  updateUserSettings(input: $input, condition: $condition) {
+    id
+    googleToken
+    isSynced
+    theme
+    owner
+    createdAt
+    updatedAt
+    __typename
+  }
+}
+
+mutation DeleteUserSettings(
+  $input: DeleteUserSettingsInput!
+  $condition: ModelUserSettingsConditionInput
+) {
+  deleteUserSettings(input: $input, condition: $condition) {
+    id
+    googleToken
+    isSynced
+    theme
+    owner
+    createdAt
+    updatedAt
+    __typename
+  }
+}

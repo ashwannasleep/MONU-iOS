@@ -1,0 +1,95 @@
+type BucketItem @model @auth(rules: [{ allow: owner }]) {
+  id: ID!
+  text: String!
+  category: String
+  date: AWSDate
+  link: AWSURL
+  done: Boolean
+  owner: String
+}
+
+type YearlyGoal @model @auth(rules: [{ allow: owner }]) {
+  id: ID!
+  year: Int!
+  title: String!
+  details: String
+  order: Int
+  done: Boolean
+  owner: String
+}
+
+type DailyTask @model @auth(rules: [{ allow: owner }]) {
+  id: ID!
+  date: AWSDate!
+  text: String!
+  time: String
+  duration: String
+  order: Int
+  done: Boolean
+  owner: String
+}
+
+type Habit @model @auth(rules: [{ allow: owner }]) {
+  id: ID!
+  name: String!
+  icon: String
+  mood: String
+  days: [String]
+  description: String
+  time: String
+  plan: String
+  log: AWSJSON
+  color: String
+  owner: String
+}
+
+type FutureGoal @model @auth(rules: [{ allow: owner }]) {
+  id: ID!
+  category: String!
+  title: String!
+  done: Boolean
+  owner: String
+}
+
+type YearlyPopupTask @model @auth(rules: [{ allow: owner }]) {
+  id: ID!
+  month: String!
+  title: String!
+  date: AWSDate
+  time: AWSTime
+  done: Boolean
+  owner: String
+}
+
+type FocusTask @model @auth(rules: [{ allow: owner }]) {
+  id: ID!
+  title: String!
+  date: AWSDate
+  done: Boolean
+  owner: String
+}
+
+type MonthlyEvent @model @auth(rules: [{ allow: owner }]) {
+  id: ID!
+  title: String!
+  start: AWSDateTime!
+  end: AWSDateTime!
+  owner: String
+}
+
+type GoogleAuth @model @auth(rules: [{ allow: owner }]) {
+  id: ID!
+  token: String!
+  owner: String
+}
+
+type UserSettings @model @auth(rules: [{ allow: owner }]) {
+  id: ID!
+  googleToken: String
+  isSynced: Boolean
+  theme: String
+  owner: String
+}
+
+
+

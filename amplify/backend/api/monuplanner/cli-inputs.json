@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "serviceConfiguration": {
+    "apiName": "monuplanner",
+    "serviceName": "AppSync",
+    "defaultAuthType": {
+      "mode": "AMAZON_COGNITO_USER_POOLS",
+      "cognitoUserPoolId": "authmonuplanner846ba011"
+    },
+    "additionalAuthTypes": [],
+    "conflictResolution": {}
+  }
+}

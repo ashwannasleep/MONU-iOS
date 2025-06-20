@@ -1,0 +1,23 @@
+{
+  "dev": {
+    "awscloudformation": {
+      "AuthRoleName": "amplify-monuplanner-dev-53c39-authRole",
+      "UnauthRoleArn": "arn:aws:iam::992382377735:role/amplify-monuplanner-dev-53c39-unauthRole",
+      "AuthRoleArn": "arn:aws:iam::992382377735:role/amplify-monuplanner-dev-53c39-authRole",
+      "Region": "us-east-1",
+      "DeploymentBucketName": "amplify-monuplanner-dev-53c39-deployment",
+      "UnauthRoleName": "amplify-monuplanner-dev-53c39-unauthRole",
+      "StackName": "amplify-monuplanner-dev-53c39",
+      "StackId": "arn:aws:cloudformation:us-east-1:992382377735:stack/amplify-monuplanner-dev-53c39/c57c0090-683c-11f0-8bd5-0ecc907d8b33",
+      "AmplifyAppId": "d104y188zkxmhf"
+    },
+    "categories": {
+      "auth": {
+        "monuplanner846ba011": {}
+      },
+      "api": {
+        "monuplanner": {}
+      }
+    }
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "AppSyncApiName": "monuplanner",
+  "DynamoDBBillingMode": "PAY_PER_REQUEST",
+  "DynamoDBEnableServerSideEncryption": false,
+  "AuthCognitoUserPoolId": {
+    "Fn::GetAtt": [
+      "authmonuplanner846ba011",
+      "Outputs.UserPoolId"
+    ]
+  },
+  "AuthModeLastUpdated": "2025-08-06T17:34:38.538Z"
+}

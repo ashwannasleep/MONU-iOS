@@ -1,0 +1,8 @@
+{
+  "providers": [
+    "awscloudformation"
+  ],
+  "projectName": "MonuPlanner",
+  "version": "3.1",
+  "frontend": "ios"
+}
