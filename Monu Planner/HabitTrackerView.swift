@@ -928,16 +928,9 @@ struct ModernStatCard: View {
     
     var body: some View {
         VStack(spacing: 12) {
-            ZStack {
-                Circle()
-                    .fill(gradient)
-                    .frame(width: 50, height: 50)
-                    .shadow(color: Color(red: 0.95, green: 0.62, blue: 0.56).opacity(0.3), radius: 8, x: 0, y: 4)
-                
-                Image(systemName: icon)
-                    .font(.system(size: 24))
-                    .foregroundColor(scheme == .dark ? .white : .black)
-            }
+            Image(systemName: icon)
+                .font(.system(size: 24))
+                .foregroundColor(scheme == .dark ? .white : .black)
             
             VStack(spacing: 4) {
                 Text(value)
