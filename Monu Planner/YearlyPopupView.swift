@@ -35,7 +35,7 @@ struct YearlyPopupView: View {
                     // Header with improved calendar
                     improvedCalendarHeader
                         .padding(.horizontal, 24)
-                        .padding(.top, 20)
+                        .padding(.top, 60)
                     
                     // Task input section
                     taskInputSection

@@ -1052,11 +1052,6 @@ struct ModernHabitRow: View {
         HStack(spacing: 16) {
             // Icon and completion status
             ZStack {
-                Circle()
-                    .fill(circleGradient)
-                    .frame(width: 50, height: 50)
-                    .shadow(color: isCompletedToday ? Color.green.opacity(0.3) : Color.clear, radius: 6, x: 0, y: 3)
-                
                 Image(systemName: habit.icon)
                     .font(.system(size: 24))
                     .foregroundColor(scheme == .dark ? .white : .black)

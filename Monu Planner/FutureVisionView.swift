@@ -16,15 +16,7 @@ enum GoalCategory: String, CaseIterable {
     }
     
     var emoji: String {
-        switch self {
-        case .health: return "💪"
-        case .relationships: return "❤️"
-        case .growth: return "🌱"
-        case .travel: return "✈️"
-        case .environment: return "🌍"
-        case .career: return "💼"
-        case .finance: return "💰"
-        }
+        return ""
     }
 }
 
@@ -387,11 +379,8 @@ struct GoalCategoryCard: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            // Category Header with Emoji
+            // Category Header
             HStack {
-                Text(category.emoji)
-                    .font(.title2)
-                
                 Text(category.displayName)
                     .font(.custom("Georgia", size: 18))
                     .fontWeight(.bold)
