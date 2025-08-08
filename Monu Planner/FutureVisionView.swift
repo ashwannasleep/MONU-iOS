@@ -24,10 +24,9 @@ enum GoalCategory: String, CaseIterable {
 struct FutureVisionView: View {
     @EnvironmentObject var navigationManager: NavigationContainer.NavigationManager
     @EnvironmentObject var authManager: AuthenticationManager
-    @EnvironmentObject var languageManager: LanguageManager
     @Environment(\.colorScheme) private var colorScheme
     
-    @State private var selectedAge: Int = 21
+    @State private var selectedYear: Int = Calendar.current.component(.year, from: Date()) + 3
     @State private var goals: [GoalCategory: [FutureGoal]] = {
         var dict: [GoalCategory: [FutureGoal]] = [:]
         GoalCategory.allCases.forEach { category in
@@ -38,7 +37,7 @@ struct FutureVisionView: View {
     @State private var isLoading = false
     @State private var errorMessage = ""
     @State private var showError = false
-    @State private var showAgePicker = false
+    @State private var showYearPicker = false
     
     // Computed properties for theming
     private var backgroundColor: Color {
@@ -63,8 +62,8 @@ struct FutureVisionView: View {
                     // Header with proper spacing
                     headerView
                     
-                    // Age Target Section
-                    ageTargetSection
+                    // Year Target Section
+                    yearTargetSection
                         .padding(.horizontal, 20)
                         .padding(.bottom, 32)
                     
@@ -84,8 +83,8 @@ struct FutureVisionView: View {
         } message: {
             Text(errorMessage)
         }
-        .sheet(isPresented: $showAgePicker) {
-            agePickerSheet
+        .sheet(isPresented: $showYearPicker) {
+            yearPickerSheet
         }
     }
     
@@ -104,7 +103,7 @@ struct FutureVisionView: View {
             .padding(.top, 48)
             .padding(.bottom, 8)
             
-            Text("Your 3-Year Blueprint")
+            Text("Your Future Vision")
                 .font(.custom("Georgia", size: 16))
                 .italic()
                 .foregroundColor(.secondary)
@@ -114,8 +113,8 @@ struct FutureVisionView: View {
         }
     }
     
-    // MARK: - Age Target Section
-    private var ageTargetSection: some View {
+    // MARK: - Year Target Section
+    private var yearTargetSection: some View {
         VStack(spacing: 16) {
             HStack(spacing: 8) {
                 Text("TO:")
@@ -124,10 +123,10 @@ struct FutureVisionView: View {
                     .foregroundColor(textColor)
                 
                 Button(action: {
-                    showAgePicker = true
+                    showYearPicker = true
                 }) {
                     HStack(spacing: 4) {
-                        Text("\(selectedAge)-year-old me")
+                        Text("My future self in \(String(selectedYear))")
                             .font(.custom("Georgia", size: 18))
                             .italic()
                             .foregroundColor(textColor)
@@ -150,24 +149,31 @@ struct FutureVisionView: View {
         }
     }
     
-    // MARK: - Age Picker Sheet
-    private var agePickerSheet: some View {
+    // MARK: - Year Picker Sheet
+    private var yearPickerSheet: some View {
         NavigationView {
             VStack(spacing: 20) {
-                Text("Select Your Future Age")
+                Text("Select Your Future Year")
                     .font(.custom("Georgia", size: 20))
                     .fontWeight(.semibold)
                     .padding(.top)
                 
-                Picker("Age", selection: $selectedAge) {
-                    ForEach(18...80, id: \.self) { age in
-                        Text("\(age) years old")
-                            .font(.custom("Georgia", size: 18))
-                            .tag(age)
+                VStack(spacing: 8) {
+                    Text("Year")
+                        .font(.custom("Georgia", size: 16))
+                        .fontWeight(.medium)
+                        .foregroundColor(.secondary)
+                    
+                    Picker("Year", selection: $selectedYear) {
+                        ForEach(2025...2100, id: \.self) { year in
+                            Text(String(year))
+                                .font(.custom("Georgia", size: 18))
+                                .tag(year)
+                        }
                     }
+                    .pickerStyle(.wheel)
+                    .frame(height: 150)
                 }
-                .pickerStyle(.wheel)
-                .frame(height: 200)
                 
                 Spacer()
             }
@@ -175,7 +181,7 @@ struct FutureVisionView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Done") {
-                        showAgePicker = false
+                        showYearPicker = false
                     }
                     .fontWeight(.semibold)
                 }

@@ -22,12 +22,12 @@ struct NotificationOnboardingView: View {
                     // Icon
                     ZStack {
                         Circle()
-                            .fill(Color(red: 0.95, green: 0.62, blue: 0.56).opacity(0.2))
+                            .fill(Color(red: 0.4, green: 0.5, blue: 0.6).opacity(0.2))
                             .frame(width: 80, height: 80)
                         
                         Image(systemName: "bell.badge")
                             .font(.system(size: 32))
-                            .foregroundColor(Color(red: 0.95, green: 0.62, blue: 0.56))
+                            .foregroundColor(Color(red: 0.4, green: 0.5, blue: 0.6))
                     }
                     .padding(.top, 24)
                     
@@ -79,7 +79,7 @@ struct NotificationOnboardingView: View {
                         .foregroundColor(.white)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 16)
-                        .background(Color(red: 0.95, green: 0.62, blue: 0.56))
+                        .background(Color(red: 0.4, green: 0.5, blue: 0.6))
                         .cornerRadius(12)
                     }
                     
@@ -141,13 +141,20 @@ class NotificationOnboardingManager: ObservableObject {
     private func checkIfShouldShowOnboarding() {
         let hasSeenOnboarding = UserDefaults.standard.bool(forKey: "has_seen_notification_onboarding")
         let hasDismissedOnboarding = UserDefaults.standard.bool(forKey: "has_dismissed_notification_onboarding")
-        let notificationManager = NotificationManager.shared
         
-        // Only show onboarding if:
-        // 1. User hasn't seen it before AND hasn't dismissed it
-        // 2. Notifications are not authorized
-        // 3. User hasn't explicitly dismissed it
-        shouldShowOnboarding = !hasSeenOnboarding && !hasDismissedOnboarding && !notificationManager.isAuthorized
+        // Check notification authorization status
+        let notificationCenter = UNUserNotificationCenter.current()
+        notificationCenter.getNotificationSettings { settings in
+            DispatchQueue.main.async {
+                let isAuthorized = settings.authorizationStatus == .authorized
+                
+                // Only show onboarding if:
+                // 1. User hasn't seen it before AND hasn't dismissed it
+                // 2. Notifications are not authorized
+                // 3. User hasn't explicitly dismissed it
+                self.shouldShowOnboarding = !hasSeenOnboarding && !hasDismissedOnboarding && !isAuthorized
+            }
+        }
     }
     
     func markOnboardingAsSeen() {
@@ -164,6 +171,13 @@ class NotificationOnboardingManager: ObservableObject {
         UserDefaults.standard.removeObject(forKey: "has_seen_notification_onboarding")
         UserDefaults.standard.removeObject(forKey: "has_dismissed_notification_onboarding")
         checkIfShouldShowOnboarding()
+    }
+    
+    func updateOnboardingStatus() {
+        // Add safety check to prevent crashes
+        DispatchQueue.main.async {
+            self.checkIfShouldShowOnboarding()
+        }
     }
 }
 

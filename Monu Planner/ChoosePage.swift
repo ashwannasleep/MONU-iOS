@@ -2,8 +2,7 @@ import SwiftUI
 
 struct ChoosePageView: View {
     @EnvironmentObject var navigationManager: NavigationContainer.NavigationManager  // Use nested NavigationManager
-    @EnvironmentObject var languageManager: LanguageManager
-    @Environment(\.colorScheme) private var colorScheme
+    @EnvironmentObject var themeManager: ThemeManager
     @State private var name = "you"
 
     // Use the nested NavigationDestination type
@@ -11,37 +10,37 @@ struct ChoosePageView: View {
     
     var modules: [ModuleItem] {
         [
-            ModuleItem(title: languageManager.localizedString(.dashboard), description: "See an overview of all your progress.", destination: Destination.dashboard),
+            ModuleItem(title: "Dashboard", description: "See an overview of all your progress.", destination: Destination.dashboard),
             ModuleItem(title: "Yearly Overview", description: "Set your vision for the year.", destination: Destination.yearlyOverview),
             ModuleItem(title: "Monthly Planner", description: "Break down your year into focused months.", destination: Destination.monthlyPlanner),
             ModuleItem(title: "Daily Plan", description: "Organize your to‑dos and priorities.", destination: Destination.dailyPlan),
-            ModuleItem(title: languageManager.localizedString(.habits), description: "Build your habits with structure.", destination: Destination.habitTracker),
-            ModuleItem(title: languageManager.localizedString(.futureVision), description: "Dream and map your long‑term goals.", destination: Destination.futureVision),
-            ModuleItem(title: languageManager.localizedString(.bucketList), description: "List your big life goals & fun ideas.", destination: Destination.bucketList),
-            ModuleItem(title: languageManager.localizedString(.pomodoro), description: "Work with rhythm. Breathe between tasks.", destination: Destination.pomodoro),
-            ModuleItem(title: languageManager.localizedString(.userGuide), description: "Your guide to mindful planning with MONU.", destination: Destination.userGuide)
+            ModuleItem(title: "Habits", description: "Build your habits with structure.", destination: Destination.habitTracker),
+            ModuleItem(title: "Future Vision", description: "Dream and map your long‑term goals.", destination: Destination.futureVision),
+            ModuleItem(title: "Bucket List", description: "List your big life goals & fun ideas.", destination: Destination.bucketList),
+            ModuleItem(title: "Pomodoro", description: "Work with rhythm. Breathe between tasks.", destination: Destination.pomodoro),
+            ModuleItem(title: "User Guide", description: "Your guide to mindful planning with MONU.", destination: Destination.userGuide)
         ]
     }
     
     // MARK: - Computed properties for theming
     private var backgroundColor: Color {
-        colorScheme == .dark ? Color(red: 0.12, green: 0.12, blue: 0.12) : Color(red: 0.97, green: 0.96, blue: 0.94)
+        themeManager.backgroundColor
     }
     
     private var textColor: Color {
-        colorScheme == .dark ? Color(red: 0.94, green: 0.94, blue: 0.94) : Color(red: 0.23, green: 0.23, blue: 0.23)
+        themeManager.textColor
     }
     
     private var secondaryTextColor: Color {
-        colorScheme == .dark ? Color(red: 0.7, green: 0.7, blue: 0.7) : Color.secondary
+        themeManager.secondaryTextColor
     }
     
     private var cardBackgroundColor: Color {
-        colorScheme == .dark ? Color(red: 0.16, green: 0.16, blue: 0.16) : Color(red: 0.98, green: 0.97, blue: 0.96)
+        themeManager.cardBackgroundColor
     }
     
     private var cardBorderColor: Color {
-        colorScheme == .dark ? Color(red: 0.3, green: 0.3, blue: 0.3) : Color(red: 0.94, green: 0.92, blue: 0.9)
+        themeManager.colorScheme == .dark ? Color(red: 0.3, green: 0.3, blue: 0.3) : Color(red: 0.94, green: 0.92, blue: 0.9)
     }
 
     var body: some View {
@@ -54,7 +53,7 @@ struct ChoosePageView: View {
                         Button(action: {
                             navigationManager.navigateToRoot()
                         }) {
-                            Text(languageManager.localizedString(.appName))
+                            Text("MONU")
                                 .font(.custom("Georgia", size: 32))
                                 .fontWeight(.bold)
                                 .foregroundColor(textColor)

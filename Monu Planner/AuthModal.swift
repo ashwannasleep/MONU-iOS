@@ -1,10 +1,11 @@
 import SwiftUI
 import Amplify
 import AWSCognitoAuthPlugin
+import GoogleSignIn
 
 struct AuthModal: View {
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.colorScheme) private var scheme
+    @EnvironmentObject var themeManager: ThemeManager
     @State private var mode: AuthMode
     @State private var email = ""
     @State private var password = ""
@@ -49,7 +50,7 @@ struct AuthModal: View {
             
             // Modal content
             modalContent
-                .background(scheme == .dark ? Color(red:0.18,green:0.18,blue:0.18) : Color(red: 0.97, green: 0.96, blue: 0.94)) // #f7f5ef
+                .background(themeManager.colorScheme == .dark ? Color(red:0.18,green:0.18,blue:0.18) : Color(red: 0.97, green: 0.96, blue: 0.94)) // #f7f5ef
                 .cornerRadius(32)
                 .shadow(color: Color.black.opacity(0.1), radius: 25, x: 0, y: 25)
                 .padding(.horizontal, 16)
@@ -71,7 +72,7 @@ struct AuthModal: View {
                     onClose()
                 }
                 .font(.title2)
-                .foregroundColor(scheme == .dark ? .white : Color(red: 0.27, green: 0.27, blue: 0.27))
+                .foregroundColor(themeManager.colorScheme == .dark ? .white : Color(red: 0.27, green: 0.27, blue: 0.27))
                 .background(Color.clear)
                 .padding(.top, 12)
                 .padding(.trailing, 12)
@@ -81,13 +82,51 @@ struct AuthModal: View {
             Text(mode.rawValue)
                 .font(.custom("Georgia", size: 20))
                 .fontWeight(.semibold)
-                .foregroundColor(scheme == .dark ? .white : Color(red: 0.18, green: 0.18, blue: 0.18))
+                .foregroundColor(themeManager.colorScheme == .dark ? .white : Color(red: 0.18, green: 0.18, blue: 0.18))
                 .padding(.bottom, 20)
                 .padding(.top, -4)
             
             // Form content
             VStack(spacing: 12) {
                 formContent
+                
+                // Google Sign-In button (for sign in mode)
+                if mode == .signIn {
+                    VStack(spacing: 12) {
+                        HStack {
+                            Rectangle()
+                                .frame(height: 1)
+                                .foregroundColor(.secondary.opacity(0.3))
+                            Text("or")
+                                .font(.custom("Georgia", size: 12))
+                                .foregroundColor(.secondary)
+                            Rectangle()
+                                .frame(height: 1)
+                                .foregroundColor(.secondary.opacity(0.3))
+                        }
+                        
+                        Button(action: handleGoogleSignIn) {
+                            HStack(spacing: 8) {
+                                Image(systemName: "globe")
+                                    .font(.system(size: 16))
+                                Text("Continue with Google")
+                                    .font(.custom("Georgia", size: 16))
+                                    .fontWeight(.medium)
+                            }
+                            .foregroundColor(themeManager.colorScheme == .dark ? .white : .black)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                            .background(themeManager.colorScheme == .dark ? Color(red: 0.2, green: 0.2, blue: 0.2) : Color.white)
+                            .cornerRadius(8)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .stroke(Color.secondary.opacity(0.3), lineWidth: 1)
+                            )
+                        }
+                        .disabled(loading)
+                    }
+                    .padding(.top, 8)
+                }
                 
                 // Submit button (when applicable)
                 if shouldShowSubmitButton {
@@ -112,7 +151,7 @@ struct AuthModal: View {
                     HStack {
                         Text(mode == .signIn ? "Don't have an account?" : "Already have an account?")
                             .font(.custom("Georgia", size: 14))
-                            .foregroundColor(scheme == .dark ? .white : Color(red: 0.23, green: 0.23, blue: 0.23))
+                            .foregroundColor(themeManager.colorScheme == .dark ? .white : Color(red: 0.23, green: 0.23, blue: 0.23))
                         
                         Button(mode == .signIn ? "Sign Up" : "Sign In") {
                             resetAll()
@@ -174,7 +213,7 @@ struct AuthModal: View {
             if mode == .forgotPassword {
                 Text("We'll send a reset code to your email.")
                     .font(.custom("Georgia", size: 14))
-                    .foregroundColor(scheme == .dark ? .white : Color(red: 0.23, green: 0.23, blue: 0.23))
+                    .foregroundColor(themeManager.colorScheme == .dark ? .white : Color(red: 0.23, green: 0.23, blue: 0.23))
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 8)
@@ -190,7 +229,7 @@ struct AuthModal: View {
             if mode == .resetPassword {
                 Text("Enter the code sent to \(email) and your new password:")
                     .font(.custom("Georgia", size: 14))
-                    .foregroundColor(scheme == .dark ? .white : Color(red: 0.23, green: 0.23, blue: 0.23))
+                    .foregroundColor(themeManager.colorScheme == .dark ? .white : Color(red: 0.23, green: 0.23, blue: 0.23))
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 8)
@@ -328,6 +367,62 @@ struct AuthModal: View {
             }
         }
     }
+    
+    // MARK: - Google Sign-In
+    private func handleGoogleSignIn() {
+        Task {
+            await MainActor.run {
+                loading = true
+                message = ""
+            }
+            
+            do {
+                guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                      let window = windowScene.windows.first else {
+                    await MainActor.run {
+                        message = "Unable to present Google Sign-In"
+                        loading = false
+                    }
+                    return
+                }
+                
+                let result = try await GIDSignIn.sharedInstance.signIn(withPresenting: window.rootViewController!)
+                
+                let user = result.user
+                guard let idToken = user.idToken?.tokenString else {
+                    await MainActor.run {
+                        message = "Failed to get user token from Google"
+                        loading = false
+                    }
+                    return
+                }
+                
+                // Sign in to Amplify with Google token
+                let amplifyResult = try await Amplify.Auth.signInWithWebUI(for: .google)
+                
+                // Save the user's name and email
+                if let userName = user.profile?.name {
+                    UserDefaults.standard.set(userName, forKey: "monu_name")
+                }
+                if let userEmail = user.profile?.email {
+                    UserDefaults.standard.set(userEmail, forKey: "user_email")
+                }
+                
+                await MainActor.run {
+                    loading = false
+                    message = "Successfully signed in with Google!"
+                    dismiss()
+                    onClose()
+                }
+                
+            } catch {
+                await MainActor.run {
+                    message = "Google Sign-In failed: \(error.localizedDescription)"
+                    loading = false
+                }
+            }
+        }
+    }
 }
 
 // MARK: - Auth Text Field Component
@@ -342,14 +437,14 @@ struct AuthTextField: View {
         case emailAddress
     }
     
-    @Environment(\.colorScheme) private var scheme
+    @EnvironmentObject var themeManager: ThemeManager
     
     var body: some View {
         textFieldView
             .font(.custom("Georgia", size: 15))
             .padding(.horizontal, 16)
             .padding(.vertical, 10)
-            .background(scheme == .dark ? Color(red:0.18,green:0.18,blue:0.18) : Color.white)
+            .background(themeManager.colorScheme == .dark ? Color(red:0.18,green:0.18,blue:0.18) : Color.white)
             .cornerRadius(20)
             .overlay(
                 RoundedRectangle(cornerRadius: 20)
@@ -389,14 +484,14 @@ struct AuthButton: View {
     let title: String
     let loading: Bool
     let action: () -> Void
-    @Environment(\.colorScheme) private var scheme
+    @EnvironmentObject var themeManager: ThemeManager
     
     var body: some View {
         Button(action: action) {
             Text(title)
                 .font(.custom("Georgia", size: 15))
                 .fontWeight(.semibold)
-                .foregroundColor(scheme == .dark ? .white : Color(red: 0.1, green: 0.1, blue: 0.1))
+                .foregroundColor(themeManager.colorScheme == .dark ? .white : Color(red: 0.1, green: 0.1, blue: 0.1))
                 .frame(maxWidth: 180)
                 .frame(minHeight: 40)
                 .padding(.horizontal, 24)
@@ -429,6 +524,7 @@ extension Button {
             .underline()
     }
 }
+
 
 // MARK: - Preview
 #Preview {

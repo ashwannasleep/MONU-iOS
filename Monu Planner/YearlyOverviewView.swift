@@ -6,9 +6,10 @@ struct YearlyOverviewView: View {
     @State private var selectedMonth: String? = nil
     @State private var yearlyGoals: [YearlyGoal] = []
     @State private var isLoading = false
+    @State private var scrollOffset: CGFloat = 0
     @Environment(\.colorScheme) var colorScheme
     @EnvironmentObject var navigationManager: NavigationContainer.NavigationManager
-    @EnvironmentObject var languageManager: LanguageManager
+    @EnvironmentObject var themeManager: ThemeManager
 
     private let months = [
         "January", "February", "March", "April", "May", "June",
@@ -28,7 +29,7 @@ struct YearlyOverviewView: View {
     }
 
     var body: some View {
-        ScrollView {
+        ScrollViewReader(scrollOffset: $scrollOffset) { _ in
             VStack(spacing: 0) {
                 // MONU Header
                 headerView
@@ -42,10 +43,26 @@ struct YearlyOverviewView: View {
                 // Calendar Grid
                 monthlyGridView
             }
+            
+            // Back to Top Button
+            VStack {
+                Spacer()
+                HStack {
+                    Spacer()
+                    BackToTopButton(scrollOffset: $scrollOffset) {
+                        withAnimation(.easeInOut(duration: 0.5)) {
+                            scrollOffset = 0
+                        }
+                    }
+                    .padding(.trailing, 24)
+                    .padding(.bottom, 100)
+                }
+            }
         }
         .background(backgroundColorView)
         .sheet(item: selectedMonthBinding) { monthWrapper in
             YearlyPopupView(selectedDate: dateForMonth(monthWrapper.value))
+                .environmentObject(themeManager)
         }
         .onAppear {
             fetchYearlyGoals()
@@ -161,8 +178,8 @@ struct YearlyOverviewView: View {
     private var progressGradient: LinearGradient {
         LinearGradient(
             gradient: Gradient(colors: [
-                Color(red: 0.95, green: 0.62, blue: 0.56),
-                Color(red: 0.97, green: 0.72, blue: 0.64)
+                themeManager.accentColor,
+                themeManager.accentColor.opacity(0.7)
             ]),
             startPoint: .leading,
             endPoint: .trailing
@@ -355,13 +372,14 @@ struct YearlyGoalCardView: View {
     let colorScheme: ColorScheme
     let onToggleDone: () -> Void
     let onUpdateTitle: (String) -> Void
+    @EnvironmentObject var themeManager: ThemeManager
     
     var body: some View {
         HStack(spacing: 16) {
             Button(action: onToggleDone) {
                 Image(systemName: goal.done == true ? "checkmark.circle.fill" : "circle")
                     .font(.system(size: 24))
-                    .foregroundColor(goal.done == true ? Color(red: 0.95, green: 0.62, blue: 0.56) : Color.gray)
+                                            .foregroundColor(goal.done == true ? themeManager.accentColor : Color.gray)
             }
 
             TextField("Goal \((goal.order ?? 0) + 1)", text: titleBinding)

@@ -10,7 +10,7 @@ struct AIInsightsView: View {
             // Header
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("🤖 AI Insights")
+                    Text("AI Insights")
                         .font(.system(size: 20, weight: .semibold, design: .serif))
                         .foregroundColor(colorScheme == .dark ? .white : Color(red: 0.18, green: 0.18, blue: 0.18))
                     
@@ -28,7 +28,7 @@ struct AIInsightsView: View {
                 }) {
                     Image(systemName: "arrow.clockwise")
                         .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(Color(red: 0.95, green: 0.62, blue: 0.56))
+                        .foregroundColor(Color(red: 0.4, green: 0.5, blue: 0.6))
                 }
                 .disabled(aiManager.isLoading)
             }
@@ -62,7 +62,7 @@ struct AIInsightsView: View {
         VStack(spacing: 16) {
             ProgressView()
                 .scaleEffect(1.2)
-                .foregroundColor(Color(red: 0.95, green: 0.62, blue: 0.56))
+                .foregroundColor(Color(red: 0.4, green: 0.5, blue: 0.6))
             
             Text("Analyzing your patterns...")
                 .font(.system(size: 14, design: .serif))
@@ -97,7 +97,7 @@ struct AIInsightsView: View {
                     .foregroundColor(.white)
                     .padding(.horizontal, 20)
                     .padding(.vertical, 8)
-                    .background(Color(red: 0.95, green: 0.62, blue: 0.56))
+                    .background(Color(red: 0.4, green: 0.5, blue: 0.6))
                     .cornerRadius(8)
             }
         }
@@ -135,7 +135,7 @@ struct AIInsightsView: View {
                 }) {
                     Text("View more insights")
                         .font(.system(size: 14, weight: .medium, design: .serif))
-                        .foregroundColor(Color(red: 0.95, green: 0.62, blue: 0.56))
+                        .foregroundColor(Color(red: 0.4, green: 0.5, blue: 0.6))
                 }
             }
         }
@@ -150,7 +150,7 @@ struct EnhancedInsightCard: View {
     private var priorityColor: Color {
         switch insight.priority {
         case .high:
-            return Color(red: 0.95, green: 0.62, blue: 0.56)
+            return Color(red: 0.4, green: 0.5, blue: 0.6)
         case .medium:
             return Color(red: 0.8, green: 0.8, blue: 0.8)
         case .low:
@@ -200,15 +200,15 @@ struct EnhancedInsightCard: View {
             HStack(spacing: 8) {
                 Image(systemName: "lightbulb.fill")
                     .font(.system(size: 12))
-                    .foregroundColor(Color(red: 0.95, green: 0.62, blue: 0.56))
+                    .foregroundColor(Color(red: 0.4, green: 0.5, blue: 0.6))
                 
                 Text(insight.actionable)
                     .font(.system(size: 13, weight: .medium, design: .serif))
-                    .foregroundColor(Color(red: 0.95, green: 0.62, blue: 0.56))
+                    .foregroundColor(Color(red: 0.4, green: 0.5, blue: 0.6))
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 6)
-            .background(Color(red: 0.95, green: 0.62, blue: 0.56).opacity(0.1))
+            .background(Color(red: 0.4, green: 0.5, blue: 0.6).opacity(0.1))
             .cornerRadius(8)
         }
         .padding(16)
@@ -228,7 +228,7 @@ struct AIInsightsSection: View {
         VStack(spacing: 16) {
             // Section Header
             HStack {
-                Text("🤖 AI Insights")
+                Text("AI Insights")
                     .font(.system(size: 18, weight: .semibold, design: .serif))
                     .foregroundColor(colorScheme == .dark ? .white : Color(red: 0.18, green: 0.18, blue: 0.18))
                 
@@ -264,7 +264,7 @@ struct AIInsightsSection: View {
         HStack(spacing: 12) {
             ProgressView()
                 .scaleEffect(0.8)
-                .foregroundColor(Color(red: 0.95, green: 0.62, blue: 0.56))
+                .foregroundColor(Color(red: 0.4, green: 0.5, blue: 0.6))
             
             Text("Analyzing your patterns...")
                 .font(.system(size: 14, design: .serif))
@@ -330,7 +330,7 @@ struct EnhancedTopInsightCard: View {
                     .frame(width: 45, height: 45)
                     .background(
                         Circle()
-                            .fill(Color(red: 0.95, green: 0.62, blue: 0.56).opacity(0.2))
+                            .fill(Color(red: 0.4, green: 0.5, blue: 0.6).opacity(0.2))
                     )
                 
                 VStack(alignment: .leading, spacing: 2) {
@@ -358,16 +358,16 @@ struct EnhancedTopInsightCard: View {
             HStack(spacing: 6) {
                 Image(systemName: "lightbulb.fill")
                     .font(.system(size: 11))
-                    .foregroundColor(Color(red: 0.95, green: 0.62, blue: 0.56))
+                    .foregroundColor(Color(red: 0.4, green: 0.5, blue: 0.6))
                 
                 Text(insight.actionable)
                     .font(.system(size: 12, weight: .medium, design: .serif))
-                    .foregroundColor(Color(red: 0.95, green: 0.62, blue: 0.56))
+                    .foregroundColor(Color(red: 0.4, green: 0.5, blue: 0.6))
                     .lineLimit(1)
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 4)
-            .background(Color(red: 0.95, green: 0.62, blue: 0.56).opacity(0.1))
+            .background(Color(red: 0.4, green: 0.5, blue: 0.6).opacity(0.1))
             .cornerRadius(6)
         }
         .padding(16)

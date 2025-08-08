@@ -4,7 +4,7 @@ import Amplify
 struct PomodoroView: View {
     @EnvironmentObject var navigationManager: NavigationContainer.NavigationManager
     @AppStorage("pomodoroHistory") private var historyData: Data = Data()
-    @Environment(\.colorScheme) private var colorScheme
+    @EnvironmentObject var themeManager: ThemeManager
     
     // Timer states
     @State private var modes: [StudyMode: Int] = [
@@ -31,11 +31,11 @@ struct PomodoroView: View {
     
     // Computed properties for theming
     private var backgroundColor: Color {
-        colorScheme == .dark ? Color(red: 0.08, green: 0.08, blue: 0.12) : Color(red: 0.98, green: 0.97, blue: 0.95)
+        themeManager.backgroundColor
     }
     
     private var textColor: Color {
-        colorScheme == .dark ? .white : Color(red: 0.15, green: 0.15, blue: 0.15)
+        themeManager.textColor
     }
     
     private var displayTime: String {
@@ -54,16 +54,9 @@ struct PomodoroView: View {
     
     var body: some View {
         ZStack {
-            // Luxurious gradient background - neutral colors to avoid blue tint
-            LinearGradient(
-                gradient: Gradient(colors: [
-                    colorScheme == .dark ? Color(red: 0.06, green: 0.06, blue: 0.08) : Color(red: 0.98, green: 0.97, blue: 0.95),
-                    colorScheme == .dark ? Color(red: 0.10, green: 0.10, blue: 0.12) : Color(red: 0.95, green: 0.94, blue: 0.92)
-                ]),
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea()
+            // Background using theme colors
+            themeManager.backgroundColor
+                .ignoresSafeArea()
             
             VStack(spacing: 0) {
                 // Luxurious header
@@ -163,7 +156,7 @@ struct PomodoroView: View {
         .padding(24)
         .background(
             RoundedRectangle(cornerRadius: 20)
-                .fill(colorScheme == .dark ? Color(red: 0.12, green: 0.12, blue: 0.16) : Color.white)
+                .fill(themeManager.colorScheme == .dark ? themeManager.cardBackgroundColor : Color.white)
                 .shadow(color: Color.black.opacity(0.08), radius: 16, x: 0, y: 8)
         )
     }
@@ -190,7 +183,7 @@ struct PomodoroView: View {
                             .padding(.vertical, 12)
                             .background(
                                 RoundedRectangle(cornerRadius: 12)
-                                    .fill(colorScheme == .dark ? Color(red: 0.15, green: 0.15, blue: 0.2) : Color(red: 0.98, green: 0.98, blue: 0.99))
+                                    .fill(themeManager.colorScheme == .dark ? themeManager.cardBackgroundColor : themeManager.cardBackgroundColor)
                                     .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 4)
                             )
                             .onChange(of: customTime) { _, newValue in
@@ -219,7 +212,7 @@ struct PomodoroView: View {
                             Capsule()
                                 .fill(
                                     LinearGradient(
-                                        gradient: Gradient(colors: [Color(red: 0.95, green: 0.62, blue: 0.56), Color(red: 0.98, green: 0.75, blue: 0.65)]),
+                                        gradient: Gradient(colors: [themeManager.accentColor, themeManager.accentColor.opacity(0.7)]),
                                         startPoint: .leading,
                                         endPoint: .trailing
                                     )
@@ -232,7 +225,7 @@ struct PomodoroView: View {
         .padding(24)
         .background(
             RoundedRectangle(cornerRadius: 20)
-                .fill(colorScheme == .dark ? Color(red: 0.12, green: 0.12, blue: 0.16) : Color.white)
+                .fill(themeManager.colorScheme == .dark ? themeManager.cardBackgroundColor : Color.white)
                 .shadow(color: Color.black.opacity(0.08), radius: 16, x: 0, y: 8)
         )
     }
@@ -246,8 +239,8 @@ struct PomodoroView: View {
                     .stroke(
                         LinearGradient(
                             gradient: Gradient(colors: [
-                                phase == .focus ? Color(red: 0.95, green: 0.62, blue: 0.56).opacity(0.3) : Color(red: 0.42, green: 0.56, blue: 0.64).opacity(0.3),
-                                phase == .focus ? Color(red: 0.98, green: 0.75, blue: 0.65).opacity(0.1) : Color(red: 0.42, green: 0.56, blue: 0.64).opacity(0.1)
+                                                themeManager.accentColor.opacity(0.3),
+                themeManager.accentColor.opacity(0.1)
                             ]),
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
@@ -259,7 +252,7 @@ struct PomodoroView: View {
                 // Progress ring
                 Circle()
                     .stroke(
-                        colorScheme == .dark ? Color(red: 0.2, green: 0.2, blue: 0.25) : Color(red: 0.95, green: 0.95, blue: 0.97),
+                        themeManager.colorScheme == .dark ? themeManager.cardBackgroundColor : themeManager.cardBackgroundColor,
                         lineWidth: 8
                     )
                     .frame(width: 260, height: 260)
@@ -269,8 +262,8 @@ struct PomodoroView: View {
                     .stroke(
                         LinearGradient(
                             gradient: Gradient(colors: [
-                                phase == .focus ? Color(red: 0.95, green: 0.62, blue: 0.56) : Color(red: 0.42, green: 0.56, blue: 0.64),
-                                phase == .focus ? Color(red: 0.98, green: 0.75, blue: 0.65) : Color(red: 0.42, green: 0.56, blue: 0.64)
+                                                themeManager.accentColor,
+                themeManager.accentColor
                             ]),
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
@@ -296,16 +289,16 @@ struct PomodoroView: View {
                         HStack(spacing: 6) {
                             Image(systemName: "arrow.up.circle.fill")
                                 .font(.system(size: 14))
-                                .foregroundColor(.blue)
+                                .foregroundColor(themeManager.accentColor)
                             Text("Counting Up")
                                 .font(.system(size: 12, weight: .medium))
-                                .foregroundColor(.blue)
+                                .foregroundColor(themeManager.accentColor)
                         }
                         .padding(.horizontal, 12)
                         .padding(.vertical, 6)
                         .background(
                             Capsule()
-                                .fill(Color.blue.opacity(0.1))
+                                .fill(themeManager.accentColor.opacity(0.1))
                         )
                     }
                 }
@@ -315,8 +308,8 @@ struct PomodoroView: View {
                     .fill(
                         LinearGradient(
                             gradient: Gradient(colors: [
-                                colorScheme == .dark ? Color(red: 0.15, green: 0.15, blue: 0.2) : Color.white,
-                                colorScheme == .dark ? Color(red: 0.12, green: 0.12, blue: 0.16) : Color(red: 0.98, green: 0.98, blue: 0.99)
+                                themeManager.cardBackgroundColor,
+                                themeManager.backgroundColor
                             ]),
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
@@ -328,7 +321,7 @@ struct PomodoroView: View {
         .padding(32)
         .background(
             RoundedRectangle(cornerRadius: 24)
-                .fill(colorScheme == .dark ? Color(red: 0.12, green: 0.12, blue: 0.16) : Color.white)
+                .fill(themeManager.colorScheme == .dark ? themeManager.cardBackgroundColor : Color.white)
                 .shadow(color: Color.black.opacity(0.08), radius: 16, x: 0, y: 8)
         )
     }
@@ -369,12 +362,12 @@ struct PomodoroView: View {
                     Text(isCountingUp ? "Count Up" : "Count Down")
                         .font(.system(size: 14, weight: .medium))
                 }
-                .foregroundColor(Color(red: 0.95, green: 0.62, blue: 0.56))
+                .foregroundColor(themeManager.accentColor)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 8)
                 .background(
                     Capsule()
-                        .fill(Color(red: 0.95, green: 0.62, blue: 0.56).opacity(0.1))
+                        .fill(themeManager.accentColor.opacity(0.1))
                 )
             }
             .buttonStyle(PlainButtonStyle())
@@ -392,7 +385,7 @@ struct PomodoroView: View {
                 .padding(.vertical, 12)
                 .background(
                     RoundedRectangle(cornerRadius: 12)
-                        .fill(colorScheme == .dark ? Color(red: 0.15, green: 0.15, blue: 0.2) : Color(red: 0.95, green: 0.95, blue: 0.97))
+                        .fill(themeManager.cardBackgroundColor)
                 )
             }
             .buttonStyle(PlainButtonStyle())
@@ -400,7 +393,7 @@ struct PomodoroView: View {
         .padding(24)
         .background(
             RoundedRectangle(cornerRadius: 20)
-                .fill(colorScheme == .dark ? Color(red: 0.12, green: 0.12, blue: 0.16) : Color.white)
+                .fill(themeManager.cardBackgroundColor)
                 .shadow(color: Color.black.opacity(0.08), radius: 16, x: 0, y: 8)
         )
     }
@@ -437,7 +430,7 @@ struct PomodoroView: View {
         .padding(32)
         .background(
             RoundedRectangle(cornerRadius: 24)
-                .fill(colorScheme == .dark ? Color(red: 0.12, green: 0.12, blue: 0.16) : Color.white)
+                .fill(themeManager.cardBackgroundColor)
                 .shadow(color: Color.black.opacity(0.08), radius: 16, x: 0, y: 8)
         )
     }
@@ -637,10 +630,10 @@ struct LuxuriousModeButton: View {
     let mode: StudyMode
     let isActive: Bool
     let action: () -> Void
-    @Environment(\.colorScheme) private var colorScheme
+    @EnvironmentObject var themeManager: ThemeManager
     
     private var textColor: Color {
-        colorScheme == .dark ? .white : Color(red: 0.15, green: 0.15, blue: 0.15)
+        themeManager.textColor
     }
     
     var body: some View {
@@ -648,7 +641,7 @@ struct LuxuriousModeButton: View {
             VStack(spacing: 8) {
                 Text(mode.displayName)
                     .font(.custom("Georgia", size: 16))
-                    .foregroundColor(isActive ? .white : textColor)
+                    .foregroundColor(isActive ? .white : textColor.opacity(0.7))
                 
                 if isActive {
                     Image(systemName: "checkmark.circle.fill")
@@ -660,8 +653,19 @@ struct LuxuriousModeButton: View {
             .padding(.vertical, 12)
             .background(
                 RoundedRectangle(cornerRadius: 12)
-                    .fill(isActive ? Color(red: 0.95, green: 0.62, blue: 0.56) :
-                           (colorScheme == .dark ? Color(red: 0.16, green: 0.16, blue: 0.18) : Color.white))
+                    .fill(
+                        isActive ? 
+                            LinearGradient(
+                                gradient: Gradient(colors: [themeManager.accentColor, themeManager.accentColor.opacity(0.7)]),
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            ) : 
+                            LinearGradient(
+                                gradient: Gradient(colors: [themeManager.cardBackgroundColor.opacity(0.5), themeManager.cardBackgroundColor.opacity(0.5)]),
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                    )
                     .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 4)
             )
         }
@@ -677,7 +681,7 @@ struct LuxuriousTimerButton: View {
     let icon: String
     let style: Style
     let action: () -> Void
-    @Environment(\.colorScheme) private var colorScheme
+    @EnvironmentObject var themeManager: ThemeManager
     
     var body: some View {
         Button(action: action) {
@@ -704,21 +708,21 @@ struct LuxuriousTimerButton: View {
     
     private var backgroundColor: Color {
         switch style {
-        case .primary: return Color(red: 0.95, green: 0.62, blue: 0.56)
+        case .primary: return themeManager.accentColor
         case .secondary: return Color.gray
-        case .outline: return colorScheme == .dark ? Color(red: 0.16, green: 0.16, blue: 0.18) : Color.white
+        case .outline: return themeManager.cardBackgroundColor
         }
     }
     
     private var foregroundColor: Color {
         switch style {
         case .primary, .secondary: return .white
-        case .outline: return Color(red: 0.95, green: 0.62, blue: 0.56)
+        case .outline: return themeManager.accentColor
         }
     }
     
     private var borderColor: Color {
-        style == .outline ? Color(red: 0.95, green: 0.62, blue: 0.56) : Color.clear
+        style == .outline ? themeManager.accentColor : Color.clear
     }
 }
 
@@ -727,10 +731,10 @@ struct LuxuriousBreakButton: View {
     let subtitle: String
     let icon: String
     let action: () -> Void
-    @Environment(\.colorScheme) private var colorScheme
+    @EnvironmentObject var themeManager: ThemeManager
     
     private var textColor: Color {
-        colorScheme == .dark ? .white : Color(red: 0.15, green: 0.15, blue: 0.15)
+        themeManager.textColor
     }
     
     var body: some View {
@@ -751,7 +755,7 @@ struct LuxuriousBreakButton: View {
             .padding(.vertical, 16)
             .background(
                 RoundedRectangle(cornerRadius: 12)
-                    .fill(colorScheme == .dark ? Color(red: 0.15, green: 0.15, blue: 0.2) : Color.white)
+                    .fill(themeManager.cardBackgroundColor)
                     .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 4)
             )
         }
@@ -764,7 +768,7 @@ struct LuxuriousTimerCompleteView: View {
     @State private var scale: CGFloat = 0.5
     @State private var opacity: Double = 0
     @State private var rotation: Double = 0
-    @Environment(\.colorScheme) private var colorScheme
+    @EnvironmentObject var themeManager: ThemeManager
     
     var body: some View {
         ZStack {
@@ -788,13 +792,13 @@ struct LuxuriousTimerCompleteView: View {
                     Circle()
                         .fill(
                             LinearGradient(
-                                gradient: Gradient(colors: [Color.green, Color.mint]),
+                                gradient: Gradient(colors: [themeManager.accentColor, themeManager.accentColor.opacity(0.7)]),
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             )
                         )
                         .frame(width: 100, height: 100)
-                        .shadow(color: Color.green.opacity(0.3), radius: 20, x: 0, y: 10)
+                        .shadow(color: themeManager.accentColor.opacity(0.3), radius: 20, x: 0, y: 10)
                     
                     Image(systemName: "checkmark")
                         .font(.system(size: 40, weight: .bold))
@@ -826,13 +830,13 @@ struct LuxuriousTimerCompleteView: View {
                     .padding(.vertical, 16)
                     .background(
                         LinearGradient(
-                            gradient: Gradient(colors: [Color.green, Color.mint]),
+                            gradient: Gradient(colors: [themeManager.accentColor, themeManager.accentColor.opacity(0.7)]),
                             startPoint: .leading,
                             endPoint: .trailing
                         )
                     )
                     .cornerRadius(16)
-                    .shadow(color: Color.green.opacity(0.3), radius: 12, x: 0, y: 6)
+                    .shadow(color: themeManager.accentColor.opacity(0.3), radius: 12, x: 0, y: 6)
                 }
             }
             .padding(40)
@@ -841,8 +845,8 @@ struct LuxuriousTimerCompleteView: View {
                     .fill(
                         LinearGradient(
                             gradient: Gradient(colors: [
-                                colorScheme == .dark ? Color(red: 0.12, green: 0.12, blue: 0.16) : Color.white,
-                                colorScheme == .dark ? Color(red: 0.10, green: 0.10, blue: 0.14) : Color(red: 0.98, green: 0.98, blue: 0.99)
+                                themeManager.colorScheme == .dark ? themeManager.cardBackgroundColor : Color.white,
+                                themeManager.colorScheme == .dark ? themeManager.cardBackgroundColor : themeManager.cardBackgroundColor
                             ]),
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
@@ -880,7 +884,7 @@ struct LuxuriousTimerCompleteView: View {
 struct LuxuriousHistoryView: View {
     let sessions: [PomodoroSession]
     let onClose: () -> Void
-    @Environment(\.colorScheme) private var colorScheme
+    @EnvironmentObject var themeManager: ThemeManager
     
     private let dateFormatter: DateFormatter = {
         let formatter = DateFormatter()
@@ -892,11 +896,11 @@ struct LuxuriousHistoryView: View {
     var body: some View {
         NavigationView {
             ZStack {
-                            // Luxurious gradient background - neutral colors to avoid blue tint
+                            // Luxurious gradient background - using theme colors
             LinearGradient(
                 gradient: Gradient(colors: [
-                    colorScheme == .dark ? Color(red: 0.06, green: 0.06, blue: 0.08) : Color(red: 0.98, green: 0.97, blue: 0.95),
-                    colorScheme == .dark ? Color(red: 0.10, green: 0.10, blue: 0.12) : Color(red: 0.95, green: 0.94, blue: 0.92)
+                    themeManager.backgroundColor,
+                    themeManager.cardBackgroundColor
                 ]),
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
@@ -909,13 +913,13 @@ struct LuxuriousHistoryView: View {
                         HStack {
                             Text("Session History")
                                 .font(.custom("Georgia", size: 28))
-                                .foregroundColor(colorScheme == .dark ? .white : Color(red: 0.15, green: 0.15, blue: 0.15))
+                                .foregroundColor(themeManager.textColor)
                             
                             Spacer()
                             
                             Button("Done") { onClose() }
                                 .font(.system(size: 16, weight: .medium))
-                                .foregroundColor(Color(red: 0.95, green: 0.62, blue: 0.56))
+                                .foregroundColor(themeManager.accentColor)
                         }
                         
                         Text("Your focus journey")
@@ -949,10 +953,10 @@ struct LuxuriousHistoryView: View {
 struct LuxuriousSessionCard: View {
     let session: PomodoroSession
     let dateFormatter: DateFormatter
-    @Environment(\.colorScheme) private var colorScheme
+    @EnvironmentObject var themeManager: ThemeManager
     
     private var textColor: Color {
-        colorScheme == .dark ? .white : Color(red: 0.15, green: 0.15, blue: 0.15)
+        themeManager.textColor
     }
     
     var body: some View {
@@ -973,7 +977,7 @@ struct LuxuriousSessionCard: View {
                 VStack(alignment: .trailing, spacing: 4) {
                     Text("\(session.duration / 60) min")
                         .font(.custom("Georgia", size: 20))
-                        .foregroundColor(Color(red: 0.95, green: 0.62, blue: 0.56))
+                        .foregroundColor(themeManager.accentColor)
                     
                     Text(dateFormatter.string(from: session.completedAt))
                         .font(.system(size: 12, weight: .medium))
@@ -984,7 +988,7 @@ struct LuxuriousSessionCard: View {
         .padding(20)
         .background(
             RoundedRectangle(cornerRadius: 16)
-                .fill(colorScheme == .dark ? Color(red: 0.12, green: 0.12, blue: 0.16) : Color.white)
+                .fill(themeManager.cardBackgroundColor)
                 .shadow(color: Color.black.opacity(0.06), radius: 12, x: 0, y: 6)
         )
     }

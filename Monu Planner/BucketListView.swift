@@ -67,8 +67,7 @@ enum BucketCategory: String, CaseIterable {
 struct BucketListView: View {
     @EnvironmentObject var navigationManager: NavigationContainer.NavigationManager
     @EnvironmentObject var authManager: AuthenticationManager
-    @EnvironmentObject var languageManager: LanguageManager
-    @Environment(\.colorScheme) private var colorScheme
+    @EnvironmentObject var themeManager: ThemeManager
     
     @State private var items: [BucketListItem] = []
     @State private var newItemText = ""
@@ -79,6 +78,7 @@ struct BucketListView: View {
     @State private var errorMessage = ""
     @State private var showError = false
     @State private var showDatePicker = false
+    @State private var scrollOffset: CGFloat = 0
     
     // Computed properties
     private var totalItems: Int { items.count }
@@ -88,15 +88,15 @@ struct BucketListView: View {
     }
     
     private var backgroundColor: Color {
-        colorScheme == .dark ? Color(red: 0.12, green: 0.12, blue: 0.12) : Color(red: 0.97, green: 0.96, blue: 0.94)
+        themeManager.backgroundColor
     }
     
     private var textColor: Color {
-        colorScheme == .dark ? Color(red: 0.94, green: 0.94, blue: 0.94) : Color(red: 0.23, green: 0.23, blue: 0.23)
+        themeManager.textColor
     }
     
     private var cardBackgroundColor: Color {
-        colorScheme == .dark ? Color(red: 0.16, green: 0.16, blue: 0.18) : .white
+        themeManager.cardBackgroundColor
     }
 
     var body: some View {
@@ -104,7 +104,7 @@ struct BucketListView: View {
             backgroundColor
                 .ignoresSafeArea()
             
-            ScrollView {
+            ScrollViewReader(scrollOffset: $scrollOffset) { _ in
                 VStack(spacing: 0) {
                     // Header
                     headerView
@@ -125,10 +125,30 @@ struct BucketListView: View {
                         .padding(.bottom, 40)
                 }
             }
+            
+            // Back to Top Button
+            VStack {
+                Spacer()
+                HStack {
+                    Spacer()
+                    BackToTopButton(scrollOffset: $scrollOffset) {
+                        withAnimation(.easeInOut(duration: 0.5)) {
+                            scrollOffset = 0
+                        }
+                    }
+                    .padding(.trailing, 24)
+                    .padding(.bottom, 100)
+                }
+            }
         }
         .navigationBarHidden(true)
         .onAppear {
             fetchItems()
+        }
+        .onChange(of: authManager.isAuthenticated) { isAuthenticated in
+            if isAuthenticated && items.isEmpty {
+                fetchItems()
+            }
         }
         .alert("Error", isPresented: $showError) {
             Button("OK") { showError = false }
@@ -169,11 +189,11 @@ struct BucketListView: View {
             GeometryReader { geometry in
                 ZStack(alignment: .leading) {
                     RoundedRectangle(cornerRadius: 6)
-                        .fill(colorScheme == .dark ? Color(red: 0.27, green: 0.27, blue: 0.27) : Color(red: 0.90, green: 0.91, blue: 0.92))
+                        .fill(themeManager.colorScheme == .dark ? Color(red: 0.27, green: 0.27, blue: 0.27) : Color(red: 0.90, green: 0.91, blue: 0.92))
                         .frame(height: 12)
                     
                     RoundedRectangle(cornerRadius: 6)
-                        .fill(Color(red: 0.95, green: 0.62, blue: 0.56))
+                        .fill(themeManager.accentColor)
                         .frame(width: geometry.size.width * CGFloat(progressPercent) / 100, height: 12)
                         .animation(.easeOut(duration: 0.5), value: progressPercent)
                 }
@@ -197,7 +217,7 @@ struct BucketListView: View {
                     .background(cardBackgroundColor)
                     .overlay(
                         RoundedRectangle(cornerRadius: 8)
-                            .stroke(Color(red: 0.82, green: 0.84, blue: 0.87), lineWidth: 1)
+                            .stroke(themeManager.accentColor.opacity(0.3), lineWidth: 1)
                     )
                     .cornerRadius(8)
                     .disabled(isLoading)
@@ -235,7 +255,7 @@ struct BucketListView: View {
                         .background(cardBackgroundColor)
                         .overlay(
                             RoundedRectangle(cornerRadius: 8)
-                                .stroke(Color(red: 0.82, green: 0.84, blue: 0.87), lineWidth: 1)
+                                .stroke(themeManager.accentColor.opacity(0.3), lineWidth: 1)
                         )
                         .cornerRadius(8)
                     }
@@ -263,7 +283,7 @@ struct BucketListView: View {
                         .background(cardBackgroundColor)
                         .overlay(
                             RoundedRectangle(cornerRadius: 8)
-                                .stroke(Color(red: 0.82, green: 0.84, blue: 0.87), lineWidth: 1)
+                                .stroke(themeManager.accentColor.opacity(0.3), lineWidth: 1)
                         )
                         .cornerRadius(8)
                     }
@@ -278,7 +298,7 @@ struct BucketListView: View {
                         .background(cardBackgroundColor)
                         .overlay(
                             RoundedRectangle(cornerRadius: 8)
-                                .stroke(Color(red: 0.82, green: 0.84, blue: 0.87), lineWidth: 1)
+                                .stroke(themeManager.accentColor.opacity(0.3), lineWidth: 1)
                         )
                         .cornerRadius(8)
                         .disabled(isLoading)
@@ -309,7 +329,7 @@ struct BucketListView: View {
                 .padding(12)
                 .background(
                     newItemText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isLoading
-                        ? Color(red: 0.82, green: 0.84, blue: 0.87)
+                        ? themeManager.accentColor.opacity(0.3)
                         : Color(red: 0.78, green: 0.75, blue: 0.70)
                 )
                 .cornerRadius(8)
@@ -395,19 +415,33 @@ struct BucketListView: View {
     
     // MARK: - Methods
     private func fetchItems() {
-        guard authManager.isAuthenticated else {
-            print("❌ User not authenticated, skipping bucket list load")
-            return
-        }
-        
         isLoading = true
+        
         Task {
+            // Wait for authentication to be ready
+            var attempts = 0
+            while !authManager.isAuthenticated && attempts < 10 {
+                try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+                attempts += 1
+            }
+            
+            guard authManager.isAuthenticated else {
+                await MainActor.run {
+                    self.errorMessage = "Please sign in to view bucket list"
+                    self.showError = true
+                    self.isLoading = false
+                }
+                return
+            }
+            
             do {
                 let result = try await Amplify.API.query(request: .list(BucketItem.self))
                 await MainActor.run {
                     switch result {
                     case .success(let items):
                         self.items = items.map { BucketListItem(apiModel: $0) }
+                        self.errorMessage = ""
+                        self.showError = false
                     case .failure(let error):
                         self.errorMessage = "Failed to load items: \(error.localizedDescription)"
                         self.showError = true
@@ -549,15 +583,15 @@ struct BucketItemRow: View {
     let onToggle: () -> Void
     let onDelete: () -> Void
     
-    @Environment(\.colorScheme) private var colorScheme
+    @EnvironmentObject var themeManager: ThemeManager
     @State private var isHovered = false
     
     private var cardBackgroundColor: Color {
-        colorScheme == .dark ? Color(red: 0.16, green: 0.16, blue: 0.18) : .white
+        themeManager.cardBackgroundColor
     }
     
     private var textColor: Color {
-        colorScheme == .dark ? Color(red: 0.94, green: 0.94, blue: 0.94) : Color(red: 0.23, green: 0.23, blue: 0.23)
+        themeManager.textColor
     }
 
     var body: some View {
@@ -607,7 +641,7 @@ struct BucketItemRow: View {
                     .frame(width: 32, height: 32)
                     .background(
                         Circle()
-                            .fill(colorScheme == .dark ? Color(red: 0.3, green: 0.1, blue: 0.1) : Color(red: 0.99, green: 0.95, blue: 0.95))
+                            .fill(themeManager.colorScheme == .dark ? Color(red: 0.3, green: 0.1, blue: 0.1) : Color(red: 0.99, green: 0.95, blue: 0.95))
                             .opacity(isHovered ? 1 : 0)
                     )
             }
@@ -631,7 +665,7 @@ struct TagView: View {
     let text: String
     let type: TagType
     
-    @Environment(\.colorScheme) private var colorScheme
+    @EnvironmentObject var themeManager: ThemeManager
     
     enum TagType {
         case category, date, link
@@ -640,18 +674,18 @@ struct TagView: View {
     private var backgroundColor: Color {
         switch type {
         case .category, .date:
-            return colorScheme == .dark ? Color(red: 0.27, green: 0.27, blue: 0.27) : Color(red: 0.94, green: 0.93, blue: 0.91)
+            return themeManager.cardBackgroundColor
         case .link:
-            return colorScheme == .dark ? Color(red: 0.23, green: 0.51, blue: 0.96) : Color(red: 0.86, green: 0.92, blue: 1.0)
+            return themeManager.accentColor.opacity(0.2)
         }
     }
     
     private var foregroundColor: Color {
         switch type {
         case .category, .date:
-            return colorScheme == .dark ? Color(red: 0.8, green: 0.8, blue: 0.8) : Color(red: 0.33, green: 0.33, blue: 0.33)
+            return themeManager.textColor
         case .link:
-            return colorScheme == .dark ? .white : Color(red: 0.11, green: 0.31, blue: 0.85)
+            return themeManager.accentColor
         }
     }
 

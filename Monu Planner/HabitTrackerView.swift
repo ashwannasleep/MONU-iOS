@@ -75,10 +75,11 @@ enum HabitDifficulty: String, CaseIterable {
     }
     
     var color: Color {
+        // Use theme colors instead of hardcoded colors
         switch self {
-        case .easy: return .green
-        case .medium: return .orange
-        case .hard: return .red
+        case .easy: return Color(red: 0.2, green: 0.8, blue: 0.4) // Light green
+        case .medium: return Color(red: 0.9, green: 0.6, blue: 0.2) // Orange
+        case .hard: return Color(red: 0.9, green: 0.3, blue: 0.3) // Red
         }
     }
 }
@@ -265,8 +266,7 @@ extension HabitItem {
 struct HabitTrackerView: View {
     @EnvironmentObject var navigationManager: NavigationContainer.NavigationManager
     @EnvironmentObject var authManager: AuthenticationManager
-    @EnvironmentObject var languageManager: LanguageManager
-    @Environment(\.colorScheme) private var scheme
+    @EnvironmentObject var themeManager: ThemeManager
 
     @State private var habits: [HabitItem] = []
     @State private var selectedHabit: HabitItem?
@@ -277,6 +277,7 @@ struct HabitTrackerView: View {
     @State private var showError = false
     @State private var selectedCategory: HabitCategory? = nil
     @State private var showCategoryFilter = false
+    @State private var scrollOffset: CGFloat = 0
 
     private var todayCompletionRate: Double {
         let today = getCurrentDayString()
@@ -299,22 +300,22 @@ struct HabitTrackerView: View {
     }
     
     private var backgroundColor: Color {
-        scheme == .dark ? Color(red: 0.15, green: 0.15, blue: 0.2) : Color.white
+        themeManager.backgroundColor
     }
     
     private var secondaryBackgroundColor: Color {
-        scheme == .dark ? Color(red: 0.2, green: 0.2, blue: 0.25) : Color(red: 0.95, green: 0.95, blue: 0.97)
+        themeManager.colorScheme == .dark ? Color(red: 0.2, green: 0.2, blue: 0.25) : Color(red: 0.95, green: 0.95, blue: 0.97)
     }
     
     private func dayBackgroundGradient(for day: String, habit: HabitItem) -> LinearGradient {
         if habit.days.contains(day) {
             return LinearGradient(
-                gradient: Gradient(colors: [Color(red: 0.95, green: 0.62, blue: 0.56), Color(red: 0.98, green: 0.75, blue: 0.65)]),
+                gradient: Gradient(colors: [themeManager.accentColor, themeManager.accentColor.opacity(0.7)]),
                 startPoint: .leading,
                 endPoint: .trailing
             )
         } else {
-            let backgroundColor = scheme == .dark ? Color(red: 0.15, green: 0.15, blue: 0.2) : Color.white
+            let backgroundColor = themeManager.backgroundColor
             return LinearGradient(
                 gradient: Gradient(colors: [backgroundColor, backgroundColor]),
                 startPoint: .leading,
@@ -328,15 +329,15 @@ struct HabitTrackerView: View {
             // Beautiful gradient background
             LinearGradient(
                 gradient: Gradient(colors: [
-                    scheme == .dark ? Color(red: 0.08, green: 0.08, blue: 0.12) : Color(red: 0.98, green: 0.97, blue: 0.95),
-                    scheme == .dark ? Color(red: 0.12, green: 0.12, blue: 0.16) : Color(red: 0.95, green: 0.94, blue: 0.92)
+                    themeManager.backgroundColor,
+                    themeManager.colorScheme == .dark ? Color(red: 0.08, green: 0.08, blue: 0.08) : Color(red: 0.95, green: 0.94, blue: 0.92)
                 ]),
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
             .ignoresSafeArea()
 
-            ScrollView {
+            ScrollViewReader(scrollOffset: $scrollOffset) { _ in
                 VStack(spacing: 0) {
                     modernHeader
                     modernProgressSection
@@ -345,6 +346,21 @@ struct HabitTrackerView: View {
                     modernHabitsSection
                 }
                 .padding(.horizontal, 20)
+            }
+            
+            // Back to Top Button
+            VStack {
+                Spacer()
+                HStack {
+                    Spacer()
+                    BackToTopButton(scrollOffset: $scrollOffset) {
+                        withAnimation(.easeInOut(duration: 0.5)) {
+                            scrollOffset = 0
+                        }
+                    }
+                    .padding(.trailing, 24)
+                    .padding(.bottom, 100)
+                }
             }
         }
         .navigationBarHidden(true)
@@ -366,7 +382,27 @@ struct HabitTrackerView: View {
                 )
             }
         }
-        .onAppear { fetchHabits() }
+        .onAppear {
+            Task {
+                // Wait for authentication to be ready
+                var attempts = 0
+                while !authManager.isAuthenticated && attempts < 10 {
+                    try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+                    attempts += 1
+                }
+                
+                if authManager.isAuthenticated {
+                    fetchHabits()
+                }
+            }
+        }
+        .onChange(of: authManager.isAuthenticated) { isAuthenticated in
+            print("🔐 HabitTrackerView: Authentication changed to \(isAuthenticated)")
+            if isAuthenticated && habits.isEmpty {
+                print("📋 HabitTrackerView: Fetching habits after auth change")
+                fetchHabits()
+            }
+        }
         .alert("Error", isPresented: $showError) {
             Button("OK") { showError = false }
         } message: {
@@ -381,7 +417,7 @@ struct HabitTrackerView: View {
                 Text("MONU")
                     .font(.custom("Georgia", size: 32))
                     .fontWeight(.bold)
-                    .foregroundColor(scheme == .dark ? .white : .black)
+                    .foregroundColor(themeManager.textColor)
             }
             .buttonStyle(.plain)
             .padding(.top, 48)
@@ -402,10 +438,10 @@ struct HabitTrackerView: View {
         VStack(spacing: 20) {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(languageManager.localizedString(.todayProgress))
+                    Text("Today Progress")
                         .font(.custom("Georgia", size: 20))
                         .fontWeight(.semibold)
-                        .foregroundColor(scheme == .dark ? .white : Color(red: 0.15, green: 0.15, blue: 0.15))
+                        .foregroundColor(themeManager.textColor)
                     
                     Text("\(Int(todayCompletionRate * 100))% complete")
                         .font(.system(size: 14))
@@ -417,7 +453,7 @@ struct HabitTrackerView: View {
                 ZStack {
                     Circle()
                         .stroke(
-                            scheme == .dark ? Color(red: 0.2, green: 0.2, blue: 0.25) : Color(red: 0.9, green: 0.9, blue: 0.92),
+                            themeManager.colorScheme == .dark ? Color(red: 0.2, green: 0.2, blue: 0.25) : Color(red: 0.9, green: 0.9, blue: 0.92),
                             lineWidth: 8
                         )
                     
@@ -425,7 +461,7 @@ struct HabitTrackerView: View {
                         .trim(from: 0, to: todayCompletionRate)
                         .stroke(
                             LinearGradient(
-                                gradient: Gradient(colors: [Color(red: 0.95, green: 0.62, blue: 0.56), Color(red: 0.98, green: 0.75, blue: 0.65)]),
+                                gradient: Gradient(colors: [themeManager.accentColor, themeManager.accentColor.opacity(0.7)]),
                                 startPoint: .leading,
                                 endPoint: .trailing
                             ),
@@ -439,7 +475,7 @@ struct HabitTrackerView: View {
             .padding(24)
             .background(
                 RoundedRectangle(cornerRadius: 20)
-                    .fill(scheme == .dark ? Color(red: 0.15, green: 0.15, blue: 0.2) : Color.white)
+                    .fill(themeManager.cardBackgroundColor)
                     .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 6)
             )
         }
@@ -454,7 +490,7 @@ struct HabitTrackerView: View {
                 value: "\(totalStreak)",
                 icon: "🔥",
                 gradient: LinearGradient(
-                    gradient: Gradient(colors: [Color.orange, Color.red]),
+                    gradient: Gradient(colors: [themeManager.accentColor, themeManager.accentColor.opacity(0.7)]),
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
@@ -465,7 +501,7 @@ struct HabitTrackerView: View {
                 value: "\(totalCompletions)",
                 icon: "✅",
                 gradient: LinearGradient(
-                    gradient: Gradient(colors: [Color.green, Color.mint]),
+                    gradient: Gradient(colors: [themeManager.accentColor, themeManager.accentColor.opacity(0.7)]),
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
@@ -476,7 +512,7 @@ struct HabitTrackerView: View {
                 value: "\(habits.count)",
                 icon: "📊",
                 gradient: LinearGradient(
-                    gradient: Gradient(colors: [Color.blue, Color.cyan]),
+                    gradient: Gradient(colors: [themeManager.accentColor, themeManager.accentColor.opacity(0.7)]),
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
@@ -489,18 +525,18 @@ struct HabitTrackerView: View {
     private var modernCategoryFilter: some View {
         VStack(spacing: 16) {
             HStack {
-                Text(languageManager.localizedString(.filterByCategory))
+                Text("Filter by Category")
                     .font(.custom("Georgia", size: 18))
                     .fontWeight(.semibold)
-                    .foregroundColor(scheme == .dark ? .white : Color(red: 0.15, green: 0.15, blue: 0.15))
+                    .foregroundColor(themeManager.textColor)
                 
                 Spacer()
                 
                 Button(action: { showCategoryFilter.toggle() }) {
                     HStack(spacing: 8) {
-                        Text(selectedCategory?.displayName ?? languageManager.localizedString(.allCategories))
+                        Text(selectedCategory?.displayName ?? "All Categories")
                             .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(scheme == .dark ? .white : Color(red: 0.15, green: 0.15, blue: 0.15))
+                            .foregroundColor(themeManager.textColor)
                         
                         Image(systemName: "chevron.down")
                             .font(.system(size: 12, weight: .medium))
@@ -512,7 +548,7 @@ struct HabitTrackerView: View {
                     .padding(.vertical, 10)
                     .background(
                         RoundedRectangle(cornerRadius: 12)
-                            .fill(scheme == .dark ? Color(red: 0.2, green: 0.2, blue: 0.25) : Color.white)
+                            .fill(themeManager.cardBackgroundColor)
                             .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 4)
                     )
                 }
@@ -549,7 +585,7 @@ struct HabitTrackerView: View {
                 Text("Your Habits")
                     .font(.custom("Georgia", size: 22))
                     .fontWeight(.semibold)
-                    .foregroundColor(scheme == .dark ? .white : Color(red: 0.15, green: 0.15, blue: 0.15))
+                    .foregroundColor(themeManager.textColor)
                 
                 Spacer()
                 
@@ -569,13 +605,13 @@ struct HabitTrackerView: View {
                     .padding(.vertical, 12)
                     .background(
                         LinearGradient(
-                            gradient: Gradient(colors: [Color(red: 0.95, green: 0.62, blue: 0.56), Color(red: 0.98, green: 0.75, blue: 0.65)]),
+                            gradient: Gradient(colors: [themeManager.accentColor, themeManager.accentColor.opacity(0.7)]),
                             startPoint: .leading,
                             endPoint: .trailing
                         )
                     )
                     .cornerRadius(16)
-                    .shadow(color: Color(red: 0.95, green: 0.62, blue: 0.56).opacity(0.3), radius: 8, x: 0, y: 4)
+                    .shadow(color: themeManager.accentColor.opacity(0.3), radius: 8, x: 0, y: 4)
                 }
             }
             
@@ -620,22 +656,44 @@ struct HabitTrackerView: View {
     }
     
     private func fetchHabits() {
-        guard authManager.isAuthenticated else { return }
-        
+        print("🔄 HabitTrackerView: Starting fetchHabits()")
         isLoading = true
         errorMessage = ""
         showError = false
         
         Task {
+            print("🔐 HabitTrackerView: Auth status before wait: \(authManager.isAuthenticated)")
+            // Wait for authentication to be ready
+            var attempts = 0
+            while !authManager.isAuthenticated && attempts < 10 {
+                try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+                attempts += 1
+                print("⏳ HabitTrackerView: Auth wait attempt \(attempts)/10")
+            }
+            
+            print("🔐 HabitTrackerView: Auth status after wait: \(authManager.isAuthenticated)")
+            guard authManager.isAuthenticated else {
+                print("❌ HabitTrackerView: Authentication failed after retries")
+                await MainActor.run {
+                    self.errorMessage = "Please sign in to view habits"
+                    self.showError = true
+                    self.isLoading = false
+                }
+                return
+            }
+            
             do {
+                print("📡 HabitTrackerView: Making API query for habits")
                 let result = try await Amplify.API.query(request: .list(Habit.self))
                 await MainActor.run {
                     switch result {
                     case .success(let items):
+                        print("✅ HabitTrackerView: Successfully loaded \(items.count) habits")
                         self.habits = items.map { HabitItem(apiModel: $0) }
                         self.errorMessage = ""
                         self.showError = false
                     case .failure(let error):
+                        print("❌ HabitTrackerView: API query failed: \(error.localizedDescription)")
                         self.errorMessage = "Failed to load habits: \(error.localizedDescription)"
                         self.showError = true
                     }
@@ -734,7 +792,7 @@ struct StatCard: View {
     let icon: String
     let color: Color
     
-    @Environment(\.colorScheme) private var scheme
+    @EnvironmentObject var themeManager: ThemeManager
     
     var body: some View {
         VStack(spacing: 8) {
@@ -752,7 +810,7 @@ struct StatCard: View {
         }
         .frame(maxWidth: .infinity)
         .padding(16)
-        .background(scheme == .dark ? Color(red:0.18,green:0.18,blue:0.18) : Color.white)
+        .background(themeManager.cardBackgroundColor)
         .cornerRadius(12)
         .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
     }
@@ -763,22 +821,22 @@ struct CategoryFilterButton: View {
     let isSelected: Bool
     let onTap: () -> Void
     
-    @Environment(\.colorScheme) private var scheme
+    @EnvironmentObject var themeManager: ThemeManager
     
     var body: some View {
         Button(action: onTap) {
             HStack(spacing: 8) {
                 Image(systemName: category.emoji)
                     .font(.system(size: 16))
-                    .foregroundColor(isSelected ? .white : (scheme == .dark ? .white : .black))
+                    .foregroundColor(isSelected ? .white : themeManager.textColor)
                 
                 Text(category.displayName)
                     .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(isSelected ? .white : (scheme == .dark ? .white : .black))
+                    .foregroundColor(isSelected ? .white : themeManager.textColor)
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 8)
-            .background(isSelected ? Color(red: 0.95, green: 0.62, blue: 0.56) : (scheme == .dark ? Color(red:0.18,green:0.18,blue:0.18) : Color.white))
+            .background(isSelected ? themeManager.accentColor : themeManager.cardBackgroundColor)
             .cornerRadius(8)
             .overlay(
                 RoundedRectangle(cornerRadius: 8)
@@ -790,7 +848,7 @@ struct CategoryFilterButton: View {
 }
 
 struct EmptyHabitsView: View {
-    @Environment(\.colorScheme) private var scheme
+    @EnvironmentObject var themeManager: ThemeManager
     
     var body: some View {
         VStack(spacing: 16) {
@@ -801,7 +859,7 @@ struct EmptyHabitsView: View {
             Text("No habits yet")
                 .font(.custom("Georgia", size: 18))
                 .fontWeight(.medium)
-                .foregroundColor(scheme == .dark ? .white : .black)
+                .foregroundColor(themeManager.textColor)
             
             Text("Start building your first habit to see your progress here.")
                 .font(.system(size: 14))
@@ -810,7 +868,7 @@ struct EmptyHabitsView: View {
         }
         .padding(32)
         .frame(maxWidth: .infinity)
-        .background(scheme == .dark ? Color(red:0.18,green:0.18,blue:0.18) : Color.white)
+        .background(themeManager.cardBackgroundColor)
         .cornerRadius(16)
         .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 4)
     }
@@ -821,7 +879,7 @@ struct EnhancedHabitRow: View {
     let onToggle: () -> Void
     let onEdit: () -> Void
     
-    @Environment(\.colorScheme) private var scheme
+    @EnvironmentObject var themeManager: ThemeManager
     
     private var category: HabitCategory? {
         HabitCategory(rawValue: habit.category)
@@ -844,12 +902,12 @@ struct EnhancedHabitRow: View {
             VStack(spacing: 4) {
                 Image(systemName: habit.icon)
                     .font(.system(size: 24))
-                    .foregroundColor(scheme == .dark ? .white : .black)
+                    .foregroundColor(themeManager.textColor)
                 
                 if let category = category {
                     Image(systemName: category.emoji)
                         .font(.system(size: 12))
-                        .foregroundColor(scheme == .dark ? .white : .black)
+                        .foregroundColor(themeManager.textColor)
                 }
             }
             
@@ -858,7 +916,7 @@ struct EnhancedHabitRow: View {
                 Text(habit.name)
                     .font(.custom("Georgia", size: 16))
                     .fontWeight(.medium)
-                    .foregroundColor(scheme == .dark ? .white : .black)
+                    .foregroundColor(themeManager.textColor)
                 
                 HStack(spacing: 8) {
                     if let category = category {
@@ -882,11 +940,11 @@ struct EnhancedHabitRow: View {
                 HStack(spacing: 4) {
                     Text("🔥 \(habit.streak)")
                         .font(.system(size: 12))
-                        .foregroundColor(.orange)
+                        .foregroundColor(themeManager.accentColor)
                     
                     Text("✅ \(habit.totalCompletions)")
                         .font(.system(size: 12))
-                        .foregroundColor(.green)
+                        .foregroundColor(themeManager.accentColor)
                 }
             }
             
@@ -904,13 +962,13 @@ struct EnhancedHabitRow: View {
                 Button(action: onToggle) {
                     Image(systemName: isCompletedToday ? "checkmark.circle.fill" : "circle")
                         .font(.system(size: 20))
-                        .foregroundColor(isCompletedToday ? .green : .secondary)
+                        .foregroundColor(isCompletedToday ? themeManager.accentColor : .secondary)
                 }
                 .buttonStyle(PlainButtonStyle())
             }
         }
         .padding(16)
-        .background(scheme == .dark ? Color(red:0.18,green:0.18,blue:0.18) : Color.white)
+        .background(themeManager.cardBackgroundColor)
         .cornerRadius(12)
         .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
     }
@@ -924,19 +982,19 @@ struct ModernStatCard: View {
     let value: String
     let icon: String
     let gradient: LinearGradient
-    @Environment(\.colorScheme) private var scheme
+    @EnvironmentObject var themeManager: ThemeManager
     
     var body: some View {
         VStack(spacing: 12) {
             Image(systemName: icon)
                 .font(.system(size: 24))
-                .foregroundColor(scheme == .dark ? .white : .black)
+                .foregroundColor(themeManager.textColor)
             
             VStack(spacing: 4) {
                 Text(value)
                     .font(.custom("Georgia", size: 20))
                     .fontWeight(.bold)
-                    .foregroundColor(scheme == .dark ? .white : Color(red: 0.15, green: 0.15, blue: 0.15))
+                    .foregroundColor(themeManager.textColor)
                 
                 Text(title)
                     .font(.system(size: 12, weight: .medium))
@@ -948,7 +1006,7 @@ struct ModernStatCard: View {
         .padding(20)
         .background(
             RoundedRectangle(cornerRadius: 16)
-                .fill(scheme == .dark ? Color(red: 0.15, green: 0.15, blue: 0.2) : Color.white)
+                .fill(themeManager.cardBackgroundColor)
                 .shadow(color: Color.black.opacity(0.06), radius: 8, x: 0, y: 4)
         )
     }
@@ -959,17 +1017,17 @@ struct ModernCategoryFilterButton: View {
     let category: HabitCategory
     let isSelected: Bool
     let onTap: () -> Void
-    @Environment(\.colorScheme) private var scheme
+    @EnvironmentObject var themeManager: ThemeManager
     
     private var backgroundGradient: LinearGradient {
         if isSelected {
             return LinearGradient(
-                gradient: Gradient(colors: [Color(red: 0.95, green: 0.62, blue: 0.56), Color(red: 0.98, green: 0.75, blue: 0.65)]),
+                gradient: Gradient(colors: [themeManager.accentColor, themeManager.accentColor.opacity(0.7)]),
                 startPoint: .leading,
                 endPoint: .trailing
             )
         } else {
-            let backgroundColor = scheme == .dark ? Color(red: 0.2, green: 0.2, blue: 0.25) : Color.white
+            let backgroundColor = themeManager.cardBackgroundColor
             return LinearGradient(
                 gradient: Gradient(colors: [backgroundColor, backgroundColor]),
                 startPoint: .leading,
@@ -983,11 +1041,11 @@ struct ModernCategoryFilterButton: View {
             HStack(spacing: 12) {
                 Image(systemName: category.emoji)
                     .font(.system(size: 20))
-                    .foregroundColor(isSelected ? .white : (scheme == .dark ? .white : Color(red: 0.15, green: 0.15, blue: 0.15)))
+                    .foregroundColor(isSelected ? .white : themeManager.textColor)
                 
                 Text(category.displayName)
                     .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(isSelected ? .white : (scheme == .dark ? .white : Color(red: 0.15, green: 0.15, blue: 0.15)))
+                    .foregroundColor(isSelected ? .white : themeManager.textColor)
                 
                 Spacer()
             }
@@ -996,7 +1054,7 @@ struct ModernCategoryFilterButton: View {
             .background(
                 RoundedRectangle(cornerRadius: 12)
                     .fill(backgroundGradient)
-                    .shadow(color: isSelected ? Color(red: 0.95, green: 0.62, blue: 0.56).opacity(0.3) : Color.black.opacity(0.05), radius: 6, x: 0, y: 3)
+                    .shadow(color: isSelected ? themeManager.accentColor.opacity(0.3) : Color.black.opacity(0.05), radius: 6, x: 0, y: 3)
             )
         }
         .buttonStyle(PlainButtonStyle())
@@ -1008,7 +1066,7 @@ struct ModernHabitRow: View {
     let habit: HabitItem
     let onToggle: () -> Void
     let onEdit: () -> Void
-    @Environment(\.colorScheme) private var scheme
+    @EnvironmentObject var themeManager: ThemeManager
     
     private var isCompletedToday: Bool {
         let formatter = DateFormatter()
@@ -1034,11 +1092,11 @@ struct ModernHabitRow: View {
     }
     
     private var secondaryBackgroundColor: Color {
-        scheme == .dark ? Color(red: 0.2, green: 0.2, blue: 0.25) : Color(red: 0.95, green: 0.95, blue: 0.97)
+        themeManager.colorScheme == .dark ? Color(red: 0.2, green: 0.2, blue: 0.25) : Color(red: 0.95, green: 0.95, blue: 0.97)
     }
     
     private var backgroundColor: Color {
-        scheme == .dark ? Color(red: 0.15, green: 0.15, blue: 0.2) : Color.white
+        themeManager.cardBackgroundColor
     }
     
     var body: some View {
@@ -1047,7 +1105,7 @@ struct ModernHabitRow: View {
             ZStack {
                 Image(systemName: habit.icon)
                     .font(.system(size: 24))
-                    .foregroundColor(scheme == .dark ? .white : .black)
+                    .foregroundColor(themeManager.textColor)
                     .opacity(isCompletedToday ? 1.0 : 0.7)
             }
             .onTapGesture {
@@ -1060,7 +1118,7 @@ struct ModernHabitRow: View {
                     Text(habit.name)
                         .font(.custom("Georgia", size: 18))
                         .fontWeight(.semibold)
-                        .foregroundColor(scheme == .dark ? .white : Color(red: 0.15, green: 0.15, blue: 0.15))
+                        .foregroundColor(themeManager.textColor)
                         .strikethrough(isCompletedToday)
                         .opacity(isCompletedToday ? 0.6 : 1.0)
                     
@@ -1080,7 +1138,7 @@ struct ModernHabitRow: View {
                         HStack(spacing: 4) {
                             Image(systemName: category.emoji)
                                 .font(.system(size: 12))
-                                .foregroundColor(scheme == .dark ? .white : .black)
+                                .foregroundColor(themeManager.textColor)
                             Text(category.displayName)
                                 .font(.system(size: 11, weight: .medium))
                         }
@@ -1136,7 +1194,7 @@ struct ModernHabitRow: View {
 
 // MARK: - Modern Empty Habits View
 struct ModernEmptyHabitsView: View {
-    @Environment(\.colorScheme) private var scheme
+    @EnvironmentObject var themeManager: ThemeManager
     
     var body: some View {
         VStack(spacing: 20) {
@@ -1144,7 +1202,7 @@ struct ModernEmptyHabitsView: View {
                 Circle()
                     .fill(
                         LinearGradient(
-                            gradient: Gradient(colors: [Color(red: 0.95, green: 0.62, blue: 0.56).opacity(0.1), Color(red: 0.98, green: 0.75, blue: 0.65).opacity(0.1)]),
+                            gradient: Gradient(colors: [themeManager.accentColor.opacity(0.1), themeManager.accentColor.opacity(0.7).opacity(0.1)]),
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         )
@@ -1153,14 +1211,14 @@ struct ModernEmptyHabitsView: View {
                 
                 Image(systemName: "leaf.fill")
                     .font(.system(size: 32))
-                    .foregroundColor(Color(red: 0.95, green: 0.62, blue: 0.56))
+                    .foregroundColor(themeManager.accentColor)
             }
             
             VStack(spacing: 8) {
                 Text("No habits yet")
                     .font(.custom("Georgia", size: 20))
                     .fontWeight(.semibold)
-                    .foregroundColor(scheme == .dark ? .white : Color(red: 0.15, green: 0.15, blue: 0.15))
+                    .foregroundColor(themeManager.textColor)
                 
                 Text("Start building your first habit to see it here")
                     .font(.system(size: 14))
@@ -1171,7 +1229,7 @@ struct ModernEmptyHabitsView: View {
         .padding(40)
         .background(
             RoundedRectangle(cornerRadius: 20)
-                .fill(scheme == .dark ? Color(red: 0.15, green: 0.15, blue: 0.2) : Color.white)
+                .fill(themeManager.cardBackgroundColor)
                 .shadow(color: Color.black.opacity(0.06), radius: 12, x: 0, y: 6)
         )
     }
@@ -1184,28 +1242,28 @@ struct ModernHabitModal: View {
     let onDelete: (() -> Void)?
     let onClose: () -> Void
     
-    @Environment(\.colorScheme) private var scheme
+    @EnvironmentObject var themeManager: ThemeManager
     
     private let weekDays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
     private let icons = ["star.fill", "leaf.fill", "heart.fill", "book.fill", "figure.walk", "drop.fill", "target", "pencil", "paintbrush.fill", "music.note", "figure.stand", "brain.head.profile", "leaf", "cup.and.saucer.fill", "applelogo", "bed.double.fill", "bolt.fill", "heart", "dollarsign.circle.fill", "globe"]
     
     private var backgroundColor: Color {
-        scheme == .dark ? Color(red: 0.15, green: 0.15, blue: 0.2) : Color.white
+        themeManager.cardBackgroundColor
     }
     
     private var secondaryBackgroundColor: Color {
-        scheme == .dark ? Color(red: 0.2, green: 0.2, blue: 0.25) : Color(red: 0.95, green: 0.95, blue: 0.97)
+        themeManager.colorScheme == .dark ? Color(red: 0.2, green: 0.2, blue: 0.25) : Color(red: 0.95, green: 0.95, blue: 0.97)
     }
     
     private func dayBackgroundGradient(for day: String) -> LinearGradient {
         if habit.days.contains(day) {
             return LinearGradient(
-                gradient: Gradient(colors: [Color(red: 0.95, green: 0.62, blue: 0.56), Color(red: 0.98, green: 0.75, blue: 0.65)]),
+                gradient: Gradient(colors: [themeManager.accentColor, themeManager.accentColor.opacity(0.7)]),
                 startPoint: .leading,
                 endPoint: .trailing
             )
         } else {
-            let backgroundColor = scheme == .dark ? Color(red: 0.15, green: 0.15, blue: 0.2) : Color.white
+            let backgroundColor = themeManager.cardBackgroundColor
             return LinearGradient(
                 gradient: Gradient(colors: [backgroundColor, backgroundColor]),
                 startPoint: .leading,
@@ -1218,31 +1276,31 @@ struct ModernHabitModal: View {
         if habit.days.contains(day) {
             return .white
         } else {
-            return scheme == .dark ? .white : Color(red: 0.15, green: 0.15, blue: 0.15)
+            return themeManager.textColor
         }
     }
     
     private func dayShadowColor(for day: String) -> Color {
         if habit.days.contains(day) {
-            return Color(red: 0.95, green: 0.62, blue: 0.56).opacity(0.3)
+            return themeManager.accentColor.opacity(0.3)
         } else {
             return Color.black.opacity(0.05)
         }
     }
     
     private var textColor: Color {
-        scheme == .dark ? .white : Color(red: 0.15, green: 0.15, blue: 0.15)
+        themeManager.textColor
     }
     
     private func iconBackgroundGradient(for icon: String) -> LinearGradient {
         if habit.icon == icon {
             return LinearGradient(
-                gradient: Gradient(colors: [Color(red: 0.95, green: 0.62, blue: 0.56), Color(red: 0.98, green: 0.75, blue: 0.65)]),
+                gradient: Gradient(colors: [themeManager.accentColor, themeManager.accentColor.opacity(0.7)]),
                 startPoint: .leading,
                 endPoint: .trailing
             )
         } else {
-            let backgroundColor = scheme == .dark ? Color(red: 0.15, green: 0.15, blue: 0.2) : Color.white
+            let backgroundColor = themeManager.cardBackgroundColor
             return LinearGradient(
                 gradient: Gradient(colors: [backgroundColor, backgroundColor]),
                 startPoint: .leading,
@@ -1253,7 +1311,7 @@ struct ModernHabitModal: View {
     
     private func iconShadowColor(for icon: String) -> Color {
         if habit.icon == icon {
-            return Color(red: 0.95, green: 0.62, blue: 0.56).opacity(0.3)
+            return themeManager.accentColor.opacity(0.3)
         } else {
             return Color.black.opacity(0.05)
         }
@@ -1265,8 +1323,8 @@ struct ModernHabitModal: View {
                 // Beautiful gradient background
                 LinearGradient(
                     gradient: Gradient(colors: [
-                        scheme == .dark ? Color(red: 0.08, green: 0.08, blue: 0.12) : Color(red: 0.98, green: 0.97, blue: 0.95),
-                        scheme == .dark ? Color(red: 0.12, green: 0.12, blue: 0.16) : Color(red: 0.95, green: 0.94, blue: 0.92)
+                        themeManager.colorScheme == .dark ? Color(red: 0.12, green: 0.12, blue: 0.12) : Color(red: 0.98, green: 0.97, blue: 0.95),
+                        themeManager.colorScheme == .dark ? Color(red: 0.08, green: 0.08, blue: 0.08) : Color(red: 0.95, green: 0.94, blue: 0.92)
                     ]),
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
@@ -1306,14 +1364,14 @@ struct ModernHabitModal: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Cancel") { onClose() }
-                        .foregroundColor(scheme == .dark ? .white : .black)
+                        .foregroundColor(themeManager.textColor)
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Save") {
                         onSave(habit)
                     }
                     .disabled(habit.name.isEmpty)
-                    .foregroundColor(habit.name.isEmpty ? .secondary : Color(red:0.95,green:0.62,blue:0.56))
+                    .foregroundColor(habit.name.isEmpty ? .secondary : Color(red:0.4,green:0.5,blue:0.6))
                 }
             }
         }
@@ -1351,7 +1409,7 @@ struct ModernHabitModal: View {
                             Button(action: { habit.icon = icon }) {
                                 Image(systemName: icon)
                                     .font(.system(size: 24))
-                                    .foregroundColor(habit.icon == icon ? .white : (scheme == .dark ? .white : .black))
+                                    .foregroundColor(habit.icon == icon ? .white : (themeManager.textColor))
                                     .frame(width: 50, height: 50)
                                     .background(
                                         RoundedRectangle(cornerRadius: 12)
@@ -1420,7 +1478,7 @@ struct ModernHabitModal: View {
         .padding(20)
         .background(
             RoundedRectangle(cornerRadius: 16)
-                .fill(scheme == .dark ? Color(red: 0.15, green: 0.15, blue: 0.2) : Color.white)
+                .fill(themeManager.cardBackgroundColor)
                 .shadow(color: Color.black.opacity(0.06), radius: 12, x: 0, y: 6)
         )
     }
@@ -1431,7 +1489,7 @@ struct ModernHabitModal: View {
             Text("Schedule")
                 .font(.custom("Georgia", size: 20))
                 .fontWeight(.semibold)
-                .foregroundColor(scheme == .dark ? .white : Color(red: 0.15, green: 0.15, blue: 0.15))
+                .foregroundColor(themeManager.textColor)
 
             VStack(spacing: 16) {
                 // Frequency Picker
@@ -1488,7 +1546,7 @@ struct ModernHabitModal: View {
                     .padding(16)
                     .background(
                         RoundedRectangle(cornerRadius: 12)
-                            .fill(scheme == .dark ? Color(red: 0.15, green: 0.15, blue: 0.2) : Color.white)
+                            .fill(themeManager.cardBackgroundColor)
                             .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 4)
                     )
                     .overlay(
@@ -1500,7 +1558,7 @@ struct ModernHabitModal: View {
         .padding(20)
         .background(
             RoundedRectangle(cornerRadius: 16)
-                .fill(scheme == .dark ? Color(red: 0.15, green: 0.15, blue: 0.2) : Color.white)
+                .fill(themeManager.cardBackgroundColor)
                 .shadow(color: Color.black.opacity(0.06), radius: 12, x: 0, y: 6)
         )
     }
@@ -1523,7 +1581,7 @@ struct ModernHabitModal: View {
                     .padding(.vertical, 4)
                     .background(
                         Capsule()
-                            .fill(scheme == .dark ? Color(red: 0.2, green: 0.2, blue: 0.25) : Color(red: 0.95, green: 0.95, blue: 0.97))
+                            .fill(themeManager.colorScheme == .dark ? Color(red: 0.2, green: 0.2, blue: 0.25) : Color(red: 0.95, green: 0.95, blue: 0.97))
                     )
             }
 
@@ -1543,7 +1601,7 @@ struct ModernHabitModal: View {
         .padding(20)
         .background(
             RoundedRectangle(cornerRadius: 16)
-                .fill(scheme == .dark ? Color(red: 0.15, green: 0.15, blue: 0.2) : Color.white)
+                .fill(themeManager.cardBackgroundColor)
                 .shadow(color: Color.black.opacity(0.06), radius: 12, x: 0, y: 6)
         )
     }
@@ -1576,7 +1634,7 @@ struct ModernHabitModal: View {
                     .padding(16)
                     .background(
                         RoundedRectangle(cornerRadius: 12)
-                            .fill(scheme == .dark ? Color(red: 0.15, green: 0.15, blue: 0.2) : Color.white)
+                            .fill(themeManager.cardBackgroundColor)
                             .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 4)
                     )
                     .overlay(
@@ -1589,7 +1647,7 @@ struct ModernHabitModal: View {
                     .padding(16)
                     .background(
                         RoundedRectangle(cornerRadius: 12)
-                            .fill(scheme == .dark ? Color(red: 0.15, green: 0.15, blue: 0.2) : Color.white)
+                            .fill(themeManager.cardBackgroundColor)
                             .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 4)
                     )
                     .overlay(
@@ -1601,7 +1659,7 @@ struct ModernHabitModal: View {
         .padding(20)
         .background(
             RoundedRectangle(cornerRadius: 16)
-                .fill(scheme == .dark ? Color(red: 0.15, green: 0.15, blue: 0.2) : Color.white)
+                .fill(themeManager.cardBackgroundColor)
                 .shadow(color: Color.black.opacity(0.06), radius: 12, x: 0, y: 6)
         )
     }
@@ -1612,7 +1670,7 @@ struct ModernHabitModal: View {
             Text("Additional Details")
                 .font(.custom("Georgia", size: 20))
                 .fontWeight(.semibold)
-                .foregroundColor(scheme == .dark ? .white : Color(red: 0.15, green: 0.15, blue: 0.15))
+                .foregroundColor(themeManager.textColor)
 
             TextField("Any additional notes or details...", text: $habit.description, axis: .vertical)
                 .font(.custom("Georgia", size: 16))
@@ -1620,7 +1678,7 @@ struct ModernHabitModal: View {
                 .padding(16)
                 .background(
                     RoundedRectangle(cornerRadius: 12)
-                        .fill(scheme == .dark ? Color(red: 0.15, green: 0.15, blue: 0.2) : Color.white)
+                        .fill(themeManager.cardBackgroundColor)
                         .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 4)
                 )
                 .overlay(
@@ -1631,7 +1689,7 @@ struct ModernHabitModal: View {
         .padding(20)
         .background(
             RoundedRectangle(cornerRadius: 16)
-                .fill(scheme == .dark ? Color(red: 0.15, green: 0.15, blue: 0.2) : Color.white)
+                .fill(themeManager.cardBackgroundColor)
                 .shadow(color: Color.black.opacity(0.06), radius: 12, x: 0, y: 6)
         )
     }
@@ -1666,17 +1724,17 @@ struct ModernCategorySelectionButton: View {
     let category: HabitCategory
     let isSelected: Bool
     let onTap: () -> Void
-    @Environment(\.colorScheme) private var scheme
+    @EnvironmentObject var themeManager: ThemeManager
     
     private var backgroundGradient: LinearGradient {
         if isSelected {
             return LinearGradient(
-                gradient: Gradient(colors: [Color(red: 0.95, green: 0.62, blue: 0.56), Color(red: 0.98, green: 0.75, blue: 0.65)]),
+                gradient: Gradient(colors: [themeManager.accentColor, themeManager.accentColor.opacity(0.7)]),
                 startPoint: .leading,
                 endPoint: .trailing
             )
         } else {
-            let backgroundColor = scheme == .dark ? Color(red: 0.2, green: 0.2, blue: 0.25) : Color.white
+            let backgroundColor = themeManager.cardBackgroundColor
             return LinearGradient(
                 gradient: Gradient(colors: [backgroundColor, backgroundColor]),
                 startPoint: .leading,
@@ -1690,11 +1748,11 @@ struct ModernCategorySelectionButton: View {
             HStack(spacing: 8) {
                 Image(systemName: category.emoji)
                     .font(.system(size: 16))
-                    .foregroundColor(isSelected ? .white : (scheme == .dark ? .white : Color(red: 0.15, green: 0.15, blue: 0.15)))
+                    .foregroundColor(isSelected ? .white : themeManager.textColor)
                 
                 Text(category.displayName)
                     .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(isSelected ? .white : (scheme == .dark ? .white : Color(red: 0.15, green: 0.15, blue: 0.15)))
+                    .foregroundColor(isSelected ? .white : themeManager.textColor)
                 
                 Spacer()
             }
@@ -1704,7 +1762,7 @@ struct ModernCategorySelectionButton: View {
                 RoundedRectangle(cornerRadius: 8)
                     .fill(backgroundGradient)
                     )
-                    .shadow(color: isSelected ? Color(red: 0.95, green: 0.62, blue: 0.56).opacity(0.3) : Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
+                    .shadow(color: isSelected ? themeManager.accentColor.opacity(0.3) : Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
         }
         .buttonStyle(PlainButtonStyle())
     }
@@ -1714,13 +1772,13 @@ struct ModernDifficultySelectionButton: View {
     let difficulty: HabitDifficulty
     let isSelected: Bool
     let onTap: () -> Void
-    @Environment(\.colorScheme) private var scheme
+    @EnvironmentObject var themeManager: ThemeManager
     
     private var difficultyBackgroundColor: Color {
         if isSelected {
             return difficulty.color
         } else {
-            return scheme == .dark ? Color(red: 0.2, green: 0.2, blue: 0.25) : Color.white
+            return themeManager.cardBackgroundColor
         }
     }
     
@@ -1751,17 +1809,17 @@ struct ModernFrequencySelectionButton: View {
     let frequency: HabitFrequency
     let isSelected: Bool
     let onTap: () -> Void
-    @Environment(\.colorScheme) private var scheme
+    @EnvironmentObject var themeManager: ThemeManager
     
     private var frequencyBackgroundGradient: LinearGradient {
         if isSelected {
             return LinearGradient(
-                gradient: Gradient(colors: [Color(red: 0.95, green: 0.62, blue: 0.56), Color(red: 0.98, green: 0.75, blue: 0.65)]),
+                gradient: Gradient(colors: [themeManager.accentColor, themeManager.accentColor.opacity(0.7)]),
                 startPoint: .leading,
                 endPoint: .trailing
             )
         } else {
-            let backgroundColor = scheme == .dark ? Color(red: 0.2, green: 0.2, blue: 0.25) : Color.white
+            let backgroundColor = themeManager.cardBackgroundColor
             return LinearGradient(
                 gradient: Gradient(colors: [backgroundColor, backgroundColor]),
                 startPoint: .leading,
@@ -1774,13 +1832,13 @@ struct ModernFrequencySelectionButton: View {
         Button(action: onTap) {
             Text(frequency.displayName)
                 .font(.system(size: 12, weight: .semibold))
-                .foregroundColor(isSelected ? .white : (scheme == .dark ? .white : Color(red: 0.15, green: 0.15, blue: 0.15)))
+                .foregroundColor(isSelected ? .white : (themeManager.textColor))
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 8)
                 .background(
                     RoundedRectangle(cornerRadius: 8)
                         .fill(frequencyBackgroundGradient)
-                        .shadow(color: isSelected ? Color(red: 0.95, green: 0.62, blue: 0.56).opacity(0.3) : Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
+                        .shadow(color: isSelected ? themeManager.accentColor.opacity(0.3) : Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
                 )
         }
         .buttonStyle(PlainButtonStyle())
@@ -1794,7 +1852,7 @@ struct EnhancedHabitModal: View {
     let onDelete: (() -> Void)?
     let onClose: () -> Void
     
-    @Environment(\.colorScheme) private var scheme
+    @EnvironmentObject var themeManager: ThemeManager
     
     private let weekDays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
     private let icons = ["star.fill", "leaf.fill", "heart.fill", "book.fill", "figure.walk", "drop.fill", "target", "pencil", "paintbrush.fill", "music.note", "figure.stand", "brain.head.profile", "leaf", "cup.and.saucer.fill", "applelogo", "bed.double.fill", "bolt.fill", "heart", "dollarsign.circle.fill", "globe"]
@@ -1802,7 +1860,7 @@ struct EnhancedHabitModal: View {
     var body: some View {
         NavigationView {
             ZStack {
-                (scheme == .dark ? Color(red:0.12,green:0.12,blue:0.12) : Color(red:0.97,green:0.96,blue:0.94))
+                (themeManager.colorScheme == .dark ? Color(red:0.12,green:0.12,blue:0.12) : Color(red:0.97,green:0.96,blue:0.94))
                     .ignoresSafeArea()
 
                 ScrollView {
@@ -1838,14 +1896,14 @@ struct EnhancedHabitModal: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Cancel") { onClose() }
-                        .foregroundColor(scheme == .dark ? .white : .black)
+                        .foregroundColor(themeManager.textColor)
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Save") {
                         onSave(habit)
                     }
                     .disabled(habit.name.isEmpty)
-                    .foregroundColor(habit.name.isEmpty ? .secondary : Color(red:0.95,green:0.62,blue:0.56))
+                    .foregroundColor(habit.name.isEmpty ? .secondary : Color(red:0.4,green:0.5,blue:0.6))
                 }
             }
         }
@@ -1857,13 +1915,13 @@ struct EnhancedHabitModal: View {
             Text("Basic Information")
                 .font(.custom("Georgia", size: 18))
                 .fontWeight(.semibold)
-                .foregroundColor(scheme == .dark ? .white : .black)
+                .foregroundColor(themeManager.textColor)
 
             VStack(spacing: 12) {
                 TextField("Habit name", text: $habit.name)
                     .font(.custom("Georgia", size: 16))
                     .padding(16)
-                    .background(scheme == .dark ? Color(red:0.18,green:0.18,blue:0.18) : Color(red:0.98,green:0.98,blue:0.98))
+                    .background(themeManager.colorScheme == .dark ? Color(red:0.18,green:0.18,blue:0.18) : Color(red:0.98,green:0.98,blue:0.98))
                     .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color(red:0.82,green:0.84,blue:0.87), lineWidth: 1))
                     .cornerRadius(12)
 
@@ -1875,11 +1933,11 @@ struct EnhancedHabitModal: View {
                         ForEach(icons, id: \.self) { icon in
                             Image(systemName: icon)
                                 .font(.system(size: 24))
-                                .foregroundColor(habit.icon == icon ? .white : (scheme == .dark ? .white : .black))
+                                .foregroundColor(habit.icon == icon ? .white : themeManager.textColor)
                                 .frame(width: 44, height: 44)
-                                .background(habit.icon == icon ? Color(red:0.95,green:0.62,blue:0.56).opacity(0.2) : (scheme == .dark ? Color(red:0.18,green:0.18,blue:0.18) : Color(red:0.98,green:0.98,blue:0.98)))
+                                .background(habit.icon == icon ? Color(red:0.4,green:0.5,blue:0.6).opacity(0.2) : (themeManager.colorScheme == .dark ? Color(red:0.18,green:0.18,blue:0.18) : Color(red:0.98,green:0.98,blue:0.98)))
                                 .cornerRadius(8)
-                                .overlay(RoundedRectangle(cornerRadius: 8).stroke(habit.icon == icon ? Color(red:0.95,green:0.62,blue:0.56) : Color.clear, lineWidth: 2))
+                                .overlay(RoundedRectangle(cornerRadius: 8).stroke(habit.icon == icon ? Color(red:0.4,green:0.5,blue:0.6) : Color.clear, lineWidth: 2))
                                 .onTapGesture {
                                     habit.icon = icon
                                 }
@@ -1896,7 +1954,7 @@ struct EnhancedHabitModal: View {
             Text("Category & Difficulty")
                 .font(.custom("Georgia", size: 18))
                 .fontWeight(.semibold)
-                .foregroundColor(scheme == .dark ? .white : .black)
+                .foregroundColor(themeManager.textColor)
 
             VStack(spacing: 12) {
                 // Category Picker
@@ -1942,7 +2000,7 @@ struct EnhancedHabitModal: View {
             Text("Schedule")
                 .font(.custom("Georgia", size: 18))
                 .fontWeight(.semibold)
-                .foregroundColor(scheme == .dark ? .white : .black)
+                .foregroundColor(themeManager.textColor)
 
             VStack(spacing: 12) {
                 // Frequency Picker
@@ -1973,8 +2031,8 @@ struct EnhancedHabitModal: View {
                                 Text(String(day.prefix(1)))
                                     .font(.system(size: 14, weight: .medium))
                                     .frame(width: 36, height: 36)
-                                    .background(habit.days.contains(day) ? Color(red:0.95,green:0.62,blue:0.56) : (scheme == .dark ? Color(red:0.18,green:0.18,blue:0.18) : Color(red:0.98,green:0.98,blue:0.98)))
-                                    .foregroundColor(habit.days.contains(day) ? .white : (scheme == .dark ? .white : .black))
+                                    .background(habit.days.contains(day) ? Color(red:0.4,green:0.5,blue:0.6) : (themeManager.cardBackgroundColor))
+                                    .foregroundColor(habit.days.contains(day) ? .white : (themeManager.textColor))
                                     .cornerRadius(18)
                                     .onTapGesture {
                                         if habit.days.contains(day) {
@@ -1991,7 +2049,7 @@ struct EnhancedHabitModal: View {
                 TextField("Time (e.g., 7:00 AM)", text: $habit.time)
                     .font(.custom("Georgia", size: 16))
                     .padding(16)
-                    .background(scheme == .dark ? Color(red:0.18,green:0.18,blue:0.18) : Color(red:0.98,green:0.98,blue:0.98))
+                    .background(themeManager.cardBackgroundColor)
                     .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color(red:0.82,green:0.84,blue:0.87), lineWidth: 1))
                     .cornerRadius(12)
             }
@@ -2005,7 +2063,7 @@ struct EnhancedHabitModal: View {
                 Text("Habit Stacking")
                     .font(.custom("Georgia", size: 18))
                     .fontWeight(.semibold)
-                    .foregroundColor(scheme == .dark ? .white : .black)
+                    .foregroundColor(themeManager.textColor)
                 
                 Text("(Atomic Habits)")
                     .font(.system(size: 12))
@@ -2022,7 +2080,7 @@ struct EnhancedHabitModal: View {
                 TextField("e.g., After I brush my teeth, I will do 10 push-ups", text: $habit.habitStack)
                     .font(.custom("Georgia", size: 16))
                     .padding(16)
-                    .background(scheme == .dark ? Color(red:0.18,green:0.18,blue:0.18) : Color(red:0.98,green:0.98,blue:0.98))
+                    .background(themeManager.cardBackgroundColor)
                     .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color(red:0.82,green:0.84,blue:0.87), lineWidth: 1))
                     .cornerRadius(12)
             }
@@ -2036,7 +2094,7 @@ struct EnhancedHabitModal: View {
                 Text("Habit Loop")
                     .font(.custom("Georgia", size: 18))
                     .fontWeight(.semibold)
-                    .foregroundColor(scheme == .dark ? .white : .black)
+                    .foregroundColor(themeManager.textColor)
                 
                 Text("(The Power of Habit)")
                     .font(.system(size: 12))
@@ -2054,7 +2112,7 @@ struct EnhancedHabitModal: View {
                     TextField("e.g., When I see my phone, When I feel stressed", text: $habit.cue)
                         .font(.custom("Georgia", size: 16))
                         .padding(16)
-                        .background(scheme == .dark ? Color(red:0.18,green:0.18,blue:0.18) : Color(red:0.98,green:0.98,blue:0.98))
+                        .background(themeManager.cardBackgroundColor)
                         .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color(red:0.82,green:0.84,blue:0.87), lineWidth: 1))
                         .cornerRadius(12)
                 }
@@ -2068,7 +2126,7 @@ struct EnhancedHabitModal: View {
                     TextField("e.g., Give myself a high-five, Take a break", text: $habit.reward)
                         .font(.custom("Georgia", size: 16))
                         .padding(16)
-                        .background(scheme == .dark ? Color(red:0.18,green:0.18,blue:0.18) : Color(red:0.98,green:0.98,blue:0.98))
+                        .background(themeManager.cardBackgroundColor)
                         .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color(red:0.82,green:0.84,blue:0.87), lineWidth: 1))
                         .cornerRadius(12)
                 }
@@ -2082,13 +2140,13 @@ struct EnhancedHabitModal: View {
             Text("Details")
                 .font(.custom("Georgia", size: 18))
                 .fontWeight(.semibold)
-                .foregroundColor(scheme == .dark ? .white : .black)
+                .foregroundColor(themeManager.textColor)
 
             VStack(spacing: 12) {
                 TextField("Description", text: $habit.description, axis: .vertical)
                     .font(.custom("Georgia", size: 16))
                     .padding(16)
-                    .background(scheme == .dark ? Color(red:0.18,green:0.18,blue:0.18) : Color(red:0.98,green:0.98,blue:0.98))
+                    .background(themeManager.cardBackgroundColor)
                     .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color(red:0.82,green:0.84,blue:0.87), lineWidth: 1))
                     .cornerRadius(12)
                     .lineLimit(3...6)
@@ -2096,7 +2154,7 @@ struct EnhancedHabitModal: View {
                 TextField("How will you do it? (Tiny Habits method)", text: $habit.plan, axis: .vertical)
                     .font(.custom("Georgia", size: 16))
                     .padding(16)
-                    .background(scheme == .dark ? Color(red:0.18,green:0.18,blue:0.18) : Color(red:0.98,green:0.98,blue:0.98))
+                    .background(themeManager.cardBackgroundColor)
                     .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color(red:0.82,green:0.84,blue:0.87), lineWidth: 1))
                     .cornerRadius(12)
                     .lineLimit(3...6)
@@ -2112,7 +2170,7 @@ struct EnhancedHabitModal: View {
                 .foregroundColor(.red)
                 .frame(maxWidth: .infinity)
                 .padding(16)
-                .background(scheme == .dark ? Color(red:0.3,green:0.1,blue:0.1) : Color(red:0.99,green:0.95,blue:0.95))
+                .background(themeManager.colorScheme == .dark ? Color(red:0.3,green:0.1,blue:0.1) : Color(red:0.99,green:0.95,blue:0.95))
                 .cornerRadius(12)
         }
     }
@@ -2124,23 +2182,23 @@ struct CategorySelectionButton: View {
     let isSelected: Bool
     let onTap: () -> Void
     
-    @Environment(\.colorScheme) private var scheme
+    @EnvironmentObject var themeManager: ThemeManager
     
     var body: some View {
         Button(action: onTap) {
             HStack(spacing: 8) {
                 Image(systemName: category.emoji)
                     .font(.system(size: 16))
-                    .foregroundColor(isSelected ? .white : (scheme == .dark ? .white : .black))
+                    .foregroundColor(isSelected ? .white : themeManager.textColor)
                 
                 Text(category.displayName)
                     .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(isSelected ? .white : (scheme == .dark ? .white : .black))
+                    .foregroundColor(isSelected ? .white : themeManager.textColor)
                     .lineLimit(1)
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 12)
-            .background(isSelected ? Color(red: 0.95, green: 0.62, blue: 0.56) : (scheme == .dark ? Color(red:0.18,green:0.18,blue:0.18) : Color.white))
+            .background(isSelected ? themeManager.accentColor : themeManager.cardBackgroundColor)
             .cornerRadius(8)
             .overlay(
                 RoundedRectangle(cornerRadius: 8)
@@ -2156,7 +2214,7 @@ struct DifficultySelectionButton: View {
     let isSelected: Bool
     let onTap: () -> Void
     
-    @Environment(\.colorScheme) private var scheme
+    @EnvironmentObject var themeManager: ThemeManager
     
     var body: some View {
         Button(action: onTap) {
@@ -2172,7 +2230,7 @@ struct DifficultySelectionButton: View {
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 12)
-            .background(isSelected ? difficulty.color : (scheme == .dark ? Color(red:0.18,green:0.18,blue:0.18) : Color.white))
+            .background(isSelected ? difficulty.color : themeManager.cardBackgroundColor)
             .cornerRadius(8)
             .overlay(
                 RoundedRectangle(cornerRadius: 8)
@@ -2188,16 +2246,16 @@ struct FrequencySelectionButton: View {
     let isSelected: Bool
     let onTap: () -> Void
     
-    @Environment(\.colorScheme) private var scheme
+    @EnvironmentObject var themeManager: ThemeManager
     
     var body: some View {
         Button(action: onTap) {
             Text(frequency.displayName)
                 .font(.system(size: 14, weight: .medium))
-                .foregroundColor(isSelected ? .white : (scheme == .dark ? .white : .black))
+                .foregroundColor(isSelected ? .white : themeManager.textColor)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 12)
-                .background(isSelected ? Color(red: 0.95, green: 0.62, blue: 0.56) : (scheme == .dark ? Color(red:0.18,green:0.18,blue:0.18) : Color.white))
+                .background(isSelected ? themeManager.accentColor : themeManager.cardBackgroundColor)
                 .cornerRadius(8)
                 .overlay(
                     RoundedRectangle(cornerRadius: 8)

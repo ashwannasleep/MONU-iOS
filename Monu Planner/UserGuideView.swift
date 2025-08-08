@@ -3,7 +3,7 @@ import SwiftUI
 // MARK: - Elegant User Guide View
 struct UserGuideView: View {
     @EnvironmentObject var navigationManager: NavigationContainer.NavigationManager
-    @EnvironmentObject var languageManager: LanguageManager
+    @EnvironmentObject var themeManager: ThemeManager
     @Environment(\.colorScheme) private var colorScheme
     
     @State private var selectedSection: GuideSection = .welcome
@@ -23,7 +23,7 @@ struct UserGuideView: View {
             case .dashboard: return "📊"
             case .habits: return "🌱"
             case .goals: return "🎯"
-            case .aiInsights: return "🤖"
+            case .aiInsights: return "💡"
             case .tips: return "💡"
             }
         }
@@ -34,8 +34,8 @@ struct UserGuideView: View {
             // Elegant gradient background
             LinearGradient(
                 gradient: Gradient(colors: [
-                    colorScheme == .dark ? Color(red: 0.06, green: 0.06, blue: 0.08) : Color(red: 0.98, green: 0.97, blue: 0.95),
-                    colorScheme == .dark ? Color(red: 0.10, green: 0.10, blue: 0.12) : Color(red: 0.95, green: 0.94, blue: 0.92)
+                    colorScheme == .dark ? Color(red: 0.12, green: 0.12, blue: 0.12) : Color(red: 0.98, green: 0.97, blue: 0.95),
+                    colorScheme == .dark ? Color(red: 0.08, green: 0.08, blue: 0.08) : Color(red: 0.95, green: 0.94, blue: 0.92)
                 ]),
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
@@ -103,13 +103,13 @@ struct UserGuideView: View {
                     Circle()
                         .fill(
                             LinearGradient(
-                                gradient: Gradient(colors: [Color(red: 0.95, green: 0.62, blue: 0.56), Color(red: 0.98, green: 0.75, blue: 0.65)]),
+                                gradient: Gradient(colors: [themeManager.accentColor, Color(red: 0.5, green: 0.6, blue: 0.7)]),
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             )
                         )
                         .frame(width: 50, height: 50)
-                        .shadow(color: Color(red: 0.95, green: 0.62, blue: 0.56).opacity(0.3), radius: 8, x: 0, y: 4)
+                        .shadow(color: themeManager.accentColor.opacity(0.3), radius: 8, x: 0, y: 4)
                     
                     Image(systemName: "play.fill")
                         .font(.system(size: 20, weight: .semibold))
@@ -117,11 +117,11 @@ struct UserGuideView: View {
                 }
                 
                 VStack(alignment: .leading, spacing: 4) {
-                                    Text(languageManager.localizedString(.quickStart))
+                                    Text("Quick Start")
                     .font(.custom("Georgia", size: 18))
                     .foregroundColor(textColor)
                     
-                    Text(languageManager.localizedString(.getStartedInMinutes))
+                    Text("Get started in 5 minutes")
                         .font(.system(size: 14))
                         .foregroundColor(.secondary)
                 }
@@ -130,12 +130,12 @@ struct UserGuideView: View {
                 
                 Image(systemName: "arrow.right")
                     .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(Color(red: 0.95, green: 0.62, blue: 0.56))
+                    .foregroundColor(themeManager.accentColor)
             }
             .padding(24)
             .background(
                 RoundedRectangle(cornerRadius: 20)
-                    .fill(colorScheme == .dark ? Color(red: 0.12, green: 0.12, blue: 0.16) : Color.white)
+                    .fill(colorScheme == .dark ? Color(red: 0.18, green: 0.18, blue: 0.18) : Color.white)
                     .shadow(color: Color.black.opacity(0.08), radius: 16, x: 0, y: 8)
             )
         }
@@ -191,7 +191,7 @@ struct UserGuideView: View {
                     Circle()
                         .fill(
                             LinearGradient(
-                                gradient: Gradient(colors: [Color(red: 0.95, green: 0.62, blue: 0.56).opacity(0.2), Color(red: 0.98, green: 0.75, blue: 0.65).opacity(0.2)]),
+                                gradient: Gradient(colors: [themeManager.accentColor.opacity(0.2), Color(red: 0.5, green: 0.6, blue: 0.7).opacity(0.2)]),
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             )
@@ -203,11 +203,11 @@ struct UserGuideView: View {
                 }
                 
                 VStack(spacing: 8) {
-                    Text(languageManager.localizedString(.welcomeToMonu))
+                    Text("Welcome to MONU")
                         .font(.custom("Georgia", size: 28))
                         .foregroundColor(textColor)
                     
-                    Text(languageManager.localizedString(.mindfulPlanningCompanion))
+                    Text("Your mindful planning companion")
                         .font(.custom("Georgia", size: 16))
                         .foregroundColor(.secondary)
                         .multilineTextAlignment(.center)
@@ -216,11 +216,11 @@ struct UserGuideView: View {
             
             // What is MONU
             ElegantGuideCard(
-                title: languageManager.localizedString(.whatIsMonu),
-                content: languageManager.localizedString(.monuDescription),
+                title: "What is MONU?",
+                content: "MONU is a mindful planning app designed to help you build lasting habits, achieve your goals, and live with intention. Based on research from books like Atomic Habits, The Power of Habit, and Tiny Habits, MONU combines proven strategies with beautiful design.",
                 icon: "🧠",
                 gradient: LinearGradient(
-                    gradient: Gradient(colors: [Color.blue, Color.cyan]),
+                    gradient: Gradient(colors: [themeManager.accentColor, themeManager.accentColor.opacity(0.7)]),
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
@@ -228,7 +228,7 @@ struct UserGuideView: View {
             
             // Key Features
             VStack(spacing: 20) {
-                Text(languageManager.localizedString(.keyFeatures))
+                Text("Key Features")
                     .font(.custom("Georgia", size: 22))
                     .foregroundColor(textColor)
                 
@@ -236,7 +236,7 @@ struct UserGuideView: View {
                     ElegantFeatureCard(icon: "📊", title: "Dashboard", description: "Track your progress across all areas")
                     ElegantFeatureCard(icon: "🌱", title: "Habit Building", description: "Research-based habit formation")
                     ElegantFeatureCard(icon: "🎯", title: "Goal Setting", description: "Yearly, monthly, and daily planning")
-                    ElegantFeatureCard(icon: "🤖", title: "AI Insights", description: "Personalized guidance and tips")
+                    ElegantFeatureCard(icon: "💡", title: "AI Insights", description: "Personalized guidance and tips")
                 }
             }
         }
@@ -250,7 +250,7 @@ struct UserGuideView: View {
                 content: "Your dashboard provides a comprehensive view of your progress across all areas of your life. It shows completion rates, streaks, and personalized insights to keep you motivated.",
                 icon: "📊",
                 gradient: LinearGradient(
-                    gradient: Gradient(colors: [Color.green, Color.mint]),
+                    gradient: Gradient(colors: [themeManager.accentColor, themeManager.accentColor.opacity(0.7)]),
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
@@ -264,7 +264,7 @@ struct UserGuideView: View {
                 VStack(spacing: 16) {
                     ElegantFeatureRow(icon: "📈", title: "Progress Cards", description: "Visual progress for daily, yearly, bucket list, and future goals")
                     ElegantFeatureRow(icon: "🔥", title: "Focus Card", description: "Today's tasks and weekly statistics")
-                    ElegantFeatureRow(icon: "🤖", title: "AI Insights", description: "Research-based personalized guidance")
+                    ElegantFeatureRow(icon: "💡", title: "AI Insights", description: "Research-based personalized guidance")
                     ElegantFeatureRow(icon: "📊", title: "Statistics", description: "Total streaks, completions, and active habits")
                 }
             }
@@ -274,7 +274,7 @@ struct UserGuideView: View {
                 content: "• Check your dashboard daily to see your progress\n• Use the progress cards to understand completion rates\n• Read AI insights for personalized tips\n• Focus on today's tasks for immediate action",
                 icon: "💡",
                 gradient: LinearGradient(
-                    gradient: Gradient(colors: [Color.orange, Color.yellow]),
+                    gradient: Gradient(colors: [themeManager.accentColor, themeManager.accentColor.opacity(0.7)]),
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
@@ -290,7 +290,7 @@ struct UserGuideView: View {
                 content: "MONU's habit system is based on research from 'Atomic Habits', 'The Power of Habit', and 'Tiny Habits'. It helps you create habits that stick through proven strategies.",
                 icon: "🌱",
                 gradient: LinearGradient(
-                    gradient: Gradient(colors: [Color.green, Color.mint]),
+                    gradient: Gradient(colors: [themeManager.accentColor, themeManager.accentColor.opacity(0.7)]),
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
@@ -315,7 +315,7 @@ struct UserGuideView: View {
                 content: "1. Choose a category (Health, Productivity, etc.)\n2. Start with an easy habit (1-2 minutes)\n3. Add a specific cue and reward\n4. Use habit stacking: 'After I [existing habit], I will [new habit]'\n5. Celebrate immediately after completion",
                 icon: "✨",
                 gradient: LinearGradient(
-                    gradient: Gradient(colors: [Color.purple, Color.pink]),
+                    gradient: Gradient(colors: [themeManager.accentColor, themeManager.accentColor.opacity(0.7)]),
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
@@ -326,7 +326,7 @@ struct UserGuideView: View {
                 content: "• Start tiny - 30-second habits work better\n• Focus on consistency over quantity\n• Use morning routines as keystone habits\n• Design your environment for success\n• Celebrate every completion, no matter how small",
                 icon: "💡",
                 gradient: LinearGradient(
-                    gradient: Gradient(colors: [Color.orange, Color.yellow]),
+                    gradient: Gradient(colors: [themeManager.accentColor, themeManager.accentColor.opacity(0.7)]),
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
@@ -342,7 +342,7 @@ struct UserGuideView: View {
                 content: "MONU helps you set and achieve goals at different time horizons: daily tasks, yearly goals, bucket list items, and future vision. Each serves a different purpose in your planning system.",
                 icon: "🎯",
                 gradient: LinearGradient(
-                    gradient: Gradient(colors: [Color.red, Color.orange]),
+                    gradient: Gradient(colors: [themeManager.accentColor, themeManager.accentColor.opacity(0.7)]),
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
@@ -366,7 +366,7 @@ struct UserGuideView: View {
                 content: "• Set 3-5 yearly goals maximum\n• Make goals specific and measurable\n• Include different categories (health, career, relationships)\n• Review and adjust goals regularly\n• Focus on systems over goals",
                 icon: "📋",
                 gradient: LinearGradient(
-                    gradient: Gradient(colors: [Color.blue, Color.cyan]),
+                    gradient: Gradient(colors: [themeManager.accentColor, themeManager.accentColor.opacity(0.7)]),
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
@@ -380,9 +380,9 @@ struct UserGuideView: View {
             ElegantGuideCard(
                 title: "AI-Powered Insights",
                 content: "MONU's AI analyzes your data to provide personalized insights and recommendations based on proven research from habit and productivity books.",
-                icon: "🤖",
+                icon: "💡",
                 gradient: LinearGradient(
-                    gradient: Gradient(colors: [Color.purple, Color.pink]),
+                    gradient: Gradient(colors: [themeManager.accentColor, themeManager.accentColor.opacity(0.7)]),
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
@@ -406,7 +406,7 @@ struct UserGuideView: View {
                 content: "• Insights are based on 'Atomic Habits', 'The Power of Habit', and 'Tiny Habits'\n• Recommendations focus on proven strategies\n• Tips are personalized to your data\n• Suggestions adapt as you progress",
                 icon: "📚",
                 gradient: LinearGradient(
-                    gradient: Gradient(colors: [Color.green, Color.mint]),
+                    gradient: Gradient(colors: [themeManager.accentColor, themeManager.accentColor.opacity(0.7)]),
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
@@ -422,7 +422,7 @@ struct UserGuideView: View {
                 content: "These tips are based on research and real user experiences. They'll help you get the most out of MONU and build lasting positive changes.",
                 icon: "💡",
                 gradient: LinearGradient(
-                    gradient: Gradient(colors: [Color.orange, Color.yellow]),
+                    gradient: Gradient(colors: [themeManager.accentColor, themeManager.accentColor.opacity(0.7)]),
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
@@ -447,7 +447,7 @@ struct UserGuideView: View {
                 content: "1. Set up your first habit (start tiny!)\n2. Add 3-5 yearly goals\n3. Create your first daily task\n4. Check your dashboard daily\n5. Read AI insights weekly",
                 icon: "🚀",
                 gradient: LinearGradient(
-                    gradient: Gradient(colors: [Color.blue, Color.cyan]),
+                    gradient: Gradient(colors: [themeManager.accentColor, themeManager.accentColor.opacity(0.7)]),
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
@@ -468,6 +468,7 @@ struct ElegantSectionButton: View {
     let action: () -> Void
     
     @Environment(\.colorScheme) private var colorScheme
+    @EnvironmentObject var themeManager: ThemeManager
     
     var body: some View {
         Button(action: action) {
@@ -489,7 +490,7 @@ struct ElegantSectionButton: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
-            .background(isSelected ? Color(red: 0.95, green: 0.62, blue: 0.56) : (colorScheme == .dark ? Color(red: 0.18, green: 0.18, blue: 0.18) : Color.white))
+            .background(isSelected ? themeManager.accentColor : (colorScheme == .dark ? Color(red: 0.18, green: 0.18, blue: 0.18) : Color.white))
             .cornerRadius(20)
             .overlay(
                 RoundedRectangle(cornerRadius: 20)
@@ -511,6 +512,7 @@ struct ElegantGuideCard: View {
     let gradient: LinearGradient
     
     @Environment(\.colorScheme) private var colorScheme
+    @EnvironmentObject var themeManager: ThemeManager
     
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
@@ -519,7 +521,7 @@ struct ElegantGuideCard: View {
                     Circle()
                         .fill(gradient)
                         .frame(width: 50, height: 50)
-                        .shadow(color: Color(red: 0.95, green: 0.62, blue: 0.56).opacity(0.3), radius: 8, x: 0, y: 4)
+                        .shadow(color: themeManager.accentColor.opacity(0.3), radius: 8, x: 0, y: 4)
                     
                     Text(icon)
                         .font(.system(size: 24))
@@ -554,6 +556,7 @@ struct ElegantFeatureCard: View {
     let description: String
     
     @Environment(\.colorScheme) private var colorScheme
+    @EnvironmentObject var themeManager: ThemeManager
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -562,7 +565,7 @@ struct ElegantFeatureCard: View {
                     Circle()
                         .fill(
                             LinearGradient(
-                                gradient: Gradient(colors: [Color(red: 0.95, green: 0.62, blue: 0.56).opacity(0.2), Color(red: 0.98, green: 0.75, blue: 0.65).opacity(0.2)]),
+                                gradient: Gradient(colors: [themeManager.accentColor.opacity(0.2), Color(red: 0.5, green: 0.6, blue: 0.7).opacity(0.2)]),
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             )
@@ -602,6 +605,7 @@ struct ElegantFeatureRow: View {
     let description: String
     
     @Environment(\.colorScheme) private var colorScheme
+    @EnvironmentObject var themeManager: ThemeManager
     
     var body: some View {
         HStack(spacing: 16) {
@@ -609,7 +613,7 @@ struct ElegantFeatureRow: View {
                 Circle()
                     .fill(
                         LinearGradient(
-                            gradient: Gradient(colors: [Color(red: 0.95, green: 0.62, blue: 0.56).opacity(0.2), Color(red: 0.98, green: 0.75, blue: 0.65).opacity(0.2)]),
+                            gradient: Gradient(colors: [themeManager.accentColor.opacity(0.2), Color(red: 0.5, green: 0.6, blue: 0.7).opacity(0.2)]),
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         )
@@ -640,6 +644,7 @@ struct ElegantFeatureRow: View {
 struct ElegantQuickStartGuide: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
+    @EnvironmentObject var themeManager: ThemeManager
     
     var body: some View {
         NavigationView {
@@ -663,13 +668,13 @@ struct ElegantQuickStartGuide: View {
                                 Circle()
                                     .fill(
                                         LinearGradient(
-                                            gradient: Gradient(colors: [Color(red: 0.95, green: 0.62, blue: 0.56), Color(red: 0.98, green: 0.75, blue: 0.65)]),
+                                            gradient: Gradient(colors: [themeManager.accentColor, Color(red: 0.5, green: 0.6, blue: 0.7)]),
                                             startPoint: .topLeading,
                                             endPoint: .bottomTrailing
                                         )
                                     )
                                     .frame(width: 80, height: 80)
-                                    .shadow(color: Color(red: 0.95, green: 0.62, blue: 0.56).opacity(0.3), radius: 12, x: 0, y: 6)
+                                    .shadow(color: themeManager.accentColor.opacity(0.3), radius: 12, x: 0, y: 6)
                                 
                                 Text("🚀")
                                     .font(.system(size: 40))
@@ -758,7 +763,7 @@ struct ElegantQuickStartGuide: View {
                         dismiss()
                     }
                     .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(Color(red: 0.95, green: 0.62, blue: 0.56))
+                    .foregroundColor(themeManager.accentColor)
                 }
             }
         }
@@ -772,6 +777,7 @@ struct ElegantQuickStartStep: View {
     let icon: String
     
     @Environment(\.colorScheme) private var colorScheme
+    @EnvironmentObject var themeManager: ThemeManager
     
     var body: some View {
         HStack(spacing: 20) {
@@ -779,13 +785,13 @@ struct ElegantQuickStartStep: View {
                 Circle()
                     .fill(
                         LinearGradient(
-                            gradient: Gradient(colors: [Color(red: 0.95, green: 0.62, blue: 0.56), Color(red: 0.98, green: 0.75, blue: 0.65)]),
+                            gradient: Gradient(colors: [themeManager.accentColor, Color(red: 0.5, green: 0.6, blue: 0.7)]),
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         )
                     )
                     .frame(width: 48, height: 48)
-                    .shadow(color: Color(red: 0.95, green: 0.62, blue: 0.56).opacity(0.3), radius: 8, x: 0, y: 4)
+                    .shadow(color: themeManager.accentColor.opacity(0.3), radius: 8, x: 0, y: 4)
                 
                 Text(number)
                     .font(.system(size: 20, weight: .bold))
@@ -826,6 +832,7 @@ struct ElegantTipRow: View {
     let description: String
     
     @Environment(\.colorScheme) private var colorScheme
+    @EnvironmentObject var themeManager: ThemeManager
     
     var body: some View {
         HStack(spacing: 16) {
@@ -833,13 +840,13 @@ struct ElegantTipRow: View {
                 Circle()
                     .fill(
                         LinearGradient(
-                            gradient: Gradient(colors: [Color(red: 0.95, green: 0.62, blue: 0.56), Color(red: 0.98, green: 0.75, blue: 0.65)]),
+                            gradient: Gradient(colors: [themeManager.accentColor, Color(red: 0.5, green: 0.6, blue: 0.7)]),
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         )
                     )
                     .frame(width: 36, height: 36)
-                    .shadow(color: Color(red: 0.95, green: 0.62, blue: 0.56).opacity(0.3), radius: 4, x: 0, y: 2)
+                    .shadow(color: themeManager.accentColor.opacity(0.3), radius: 4, x: 0, y: 2)
                 
                 Text(number)
                     .font(.system(size: 16, weight: .bold))

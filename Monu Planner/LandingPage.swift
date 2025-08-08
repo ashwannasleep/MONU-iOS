@@ -9,7 +9,7 @@ import UIKit
 struct LandingPageView: View {
     @EnvironmentObject var authManager: AuthenticationManager
     @EnvironmentObject var navigationManager: NavigationContainer.NavigationManager
-    @Environment(\.colorScheme) private var colorScheme
+    @EnvironmentObject var themeManager: ThemeManager
     
     @State private var showQuote = false
     @State private var quote = ""
@@ -20,6 +20,7 @@ struct LandingPageView: View {
     @State private var signupUser = ""
     @State private var signupPassword = ""
     @State private var animateElements = false
+    @State private var showQuoteAndButton = false
     
     let quotes = [
         "Take your time, {name}.",
@@ -35,27 +36,27 @@ struct LandingPageView: View {
     
     // MARK: - Computed properties for theming
     private var backgroundColor: Color {
-        colorScheme == .dark ? Color(red: 0.12, green: 0.12, blue: 0.12) : Color(red: 0.97, green: 0.96, blue: 0.94)
+        themeManager.backgroundColor
     }
     
     private var textColor: Color {
-        colorScheme == .dark ? Color(red: 0.94, green: 0.94, blue: 0.94) : Color(red: 0.23, green: 0.23, blue: 0.23)
+        themeManager.textColor
     }
     
     private var secondaryTextColor: Color {
-        colorScheme == .dark ? Color(red: 0.7, green: 0.7, blue: 0.7) : Color(red: 0.35, green: 0.35, blue: 0.35)
+        themeManager.secondaryTextColor
     }
     
     private var buttonBackgroundColor: Color {
-        colorScheme == .dark ? Color(red: 0.27, green: 0.27, blue: 0.27) : Color(red: 0.78, green: 0.75, blue: 0.7)
+        themeManager.buttonBackgroundColor
     }
     
     private var buttonBorderColor: Color {
-        colorScheme == .dark ? Color(red: 0.4, green: 0.4, blue: 0.4) : Color(red: 0.08, green: 0.04, blue: 0.04)
+        themeManager.buttonBorderColor
     }
     
     private var cardBackgroundColor: Color {
-        colorScheme == .dark ? Color(red: 0.16, green: 0.16, blue: 0.16) : Color.white
+        themeManager.cardBackgroundColor
     }
     
     var body: some View {
@@ -65,27 +66,37 @@ struct LandingPageView: View {
                 backgroundColor
                     .ignoresSafeArea()
                 
+                // Floating particles
+                ForEach(0..<8, id: \.self) { index in
+                    FloatingParticleView(
+                        delay: Double(index) * 0.5,
+                        isAnimating: animateElements
+                    )
+                }
+                
                 VStack(spacing: 20) {
                     Spacer()
                     
                     // Main Content Container with scaling
                     VStack(spacing: 16) {
-                        // Title and Subtitle
-                        VStack(spacing: 8) {
-                            Text("MONU")
-                                .font(.custom("Georgia", size: geometry.size.width < 400 ? 40 : 48))
-                                .fontWeight(.semibold)
-                                .tracking(2)
-                                .foregroundColor(textColor)
+                        // Animated Pixel MONU Logo
+                        VStack(spacing: 6) {
+                            // Pixel-style MONU letters with tighter spacing
+                            HStack(spacing: 2) {
+                                PixelLetterView(letter: "M", delay: 0.0, isAnimating: animateElements)
+                                PixelLetterView(letter: "O", delay: 0.1, isAnimating: animateElements)
+                                PixelLetterView(letter: "N", delay: 0.2, isAnimating: animateElements)
+                                PixelLetterView(letter: "U", delay: 0.3, isAnimating: animateElements)
+                            }
                             
+                            // Subtitle without dots
                             Text("moment & you")
                                 .font(.custom("Georgia", size: geometry.size.width < 400 ? 16 : 20))
                                 .italic()
                                 .foregroundColor(secondaryTextColor)
+                                .opacity(animateElements ? 1 : 0)
+                                .animation(.easeInOut(duration: 0.8).delay(0.4), value: animateElements)
                         }
-                        .scaleEffect(1.2)
-                        .opacity(animateElements ? 1 : 0)
-                        .animation(.easeInOut(duration: 0.8), value: animateElements)
                         
                         Spacer().frame(height: 40)
                         
@@ -111,12 +122,19 @@ struct LandingPageView: View {
                 onSignUp: handleSignUp,
                 onClose: { showAuthModal = false }
             )
-            .preferredColorScheme(colorScheme)
+            .preferredColorScheme(themeManager.colorScheme)
         }
         .onAppear {
             checkExistingSession()
-            withAnimation(.easeInOut(duration: 0.5)) {
+            withAnimation(.easeInOut(duration: 0.8)) {
                 animateElements = true
+            }
+            
+            // Show quote and button together with the logo
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                withAnimation(.easeInOut(duration: 0.8)) {
+                    showQuoteAndButton = true
+                }
             }
         }
         #if os(iOS)
@@ -159,9 +177,9 @@ struct LandingPageView: View {
                 .multilineTextAlignment(.center)
                 .foregroundColor(textColor)
                 .padding(.horizontal, 20)
-                .opacity(showQuote ? 1 : 0)
-                .offset(y: showQuote ? 0 : 20)
-                .animation(.easeInOut(duration: 0.8), value: showQuote)
+                .opacity(showQuoteAndButton ? 1 : 0)
+                .offset(y: showQuoteAndButton ? 0 : 20)
+                .animation(.easeInOut(duration: 0.8), value: showQuoteAndButton)
             
             MonuButton(
                 title: "Start Planning",
@@ -174,14 +192,12 @@ struct LandingPageView: View {
                 navigationManager.navigate(to: .choose)
                 print("Navigation path after navigate: \(navigationManager.navigationPath)")
             }
-
-            .opacity(showQuote ? 1 : 0)
-            .offset(y: showQuote ? 0 : 20)
+            .opacity(showQuoteAndButton ? 1 : 0)
+            .offset(y: showQuoteAndButton ? 0 : 20)
             .onAppear {
-                print("🎯 Button appeared, showQuote: \(showQuote)")
+                print("🎯 Button appeared, showQuoteAndButton: \(showQuoteAndButton)")
             }
-            .animation(.easeInOut(duration: 0.8).delay(0.3), value: showQuote)
-
+            .animation(.easeInOut(duration: 0.8).delay(0.3), value: showQuoteAndButton)
         }
     }
     
@@ -477,3 +493,85 @@ struct CustomTextField: View {
     #endif
 }
 
+
+
+// MARK: - Pixel Letter View Component
+struct PixelLetterView: View {
+    let letter: String
+    let delay: Double
+    let isAnimating: Bool
+    
+    @State private var isJumping = false
+    @State private var showGlow = false
+    @State private var isPulsing = false
+    @EnvironmentObject var themeManager: ThemeManager
+    
+    var body: some View {
+        ZStack {
+            // Glow effect
+            Text(letter)
+                .font(.custom("Georgia", size: 48))
+                .fontWeight(.bold)
+                .foregroundColor(themeManager.accentColor.opacity(0.3))
+                .blur(radius: 8)
+                .scaleEffect(showGlow ? 1.2 : 1.0)
+                .opacity(showGlow ? 1 : 0)
+                .animation(.easeInOut(duration: 1.0).repeatForever(autoreverses: true), value: showGlow)
+            
+            // Main letter
+            Text(letter)
+                .font(.custom("Georgia", size: 48))
+                .fontWeight(.bold)
+                .foregroundColor(themeManager.textColor)
+                .scaleEffect(isJumping ? 1.1 : (isPulsing ? 1.05 : 1.0))
+                .offset(y: isJumping ? -8 : 0)
+                .animation(.easeInOut(duration: 0.6).repeatForever(autoreverses: true).delay(delay), value: isJumping)
+                .animation(.easeInOut(duration: 2.0).repeatForever(autoreverses: true).delay(delay + 1.0), value: isPulsing)
+        }
+        .opacity(isAnimating ? 1 : 0)
+        .scaleEffect(isAnimating ? 1.0 : 0.5)
+        .animation(.spring(response: 0.6, dampingFraction: 0.6).delay(delay), value: isAnimating)
+        .onAppear {
+            if isAnimating {
+                DispatchQueue.main.asyncAfter(deadline: .now() + delay + 0.5) {
+                    isJumping = true
+                    showGlow = true
+                }
+                
+                // Start pulsing after jumping animation
+                DispatchQueue.main.asyncAfter(deadline: .now() + delay + 1.5) {
+                    isPulsing = true
+                }
+            }
+        }
+    }
+}
+
+
+// MARK: - Floating Particle View
+struct FloatingParticleView: View {
+    let delay: Double
+    let isAnimating: Bool
+    
+    @State private var offset = CGSize.zero
+    @State private var opacity: Double = 0
+    @EnvironmentObject var themeManager: ThemeManager
+    
+    var body: some View {
+        Circle()
+            .fill(themeManager.accentColor.opacity(0.3))
+            .frame(width: 4, height: 4)
+            .offset(offset)
+            .opacity(opacity)
+            .onAppear {
+                if isAnimating {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+                        withAnimation(.easeInOut(duration: 3.0).repeatForever(autoreverses: true)) {
+                            offset = CGSize(width: CGFloat.random(in: -50...50), height: CGFloat.random(in: -100...100))
+                            opacity = 1
+                        }
+                    }
+                }
+            }
+    }
+}

@@ -3,6 +3,11 @@ import Amplify
 import AWSCognitoAuthPlugin
 import AWSAPIPlugin
 import GoogleSignIn
+import UserNotifications
+
+extension Notification.Name {
+    static let welcomeCompleted = Notification.Name("welcomeCompleted")
+}
 
 @main
 struct MonuPlannerApp: App {
@@ -11,15 +16,43 @@ struct MonuPlannerApp: App {
     @StateObject private var notificationManager = NotificationManager.shared
     @StateObject private var notificationOnboarding = NotificationOnboardingManager.shared
     @StateObject private var aiInsightsManager = AIInsightsManager.shared
-    @StateObject private var languageManager = LanguageManager.shared
+    @StateObject private var themeManager = ThemeManager.shared
     @State private var amplifyConfigured = false
     @State private var initializationError: String?
+    @State private var hasSeenWelcome = false
 
     static var hasConfiguredAmplify = false
 
     init() {
-        _navigationManager = StateObject(wrappedValue: NavigationContainer.NavigationManager())
-        configureGoogleSignIn()
+        print("🚀 Starting MonuPlannerApp initialization...")
+        
+        do {
+            // Initialize navigation manager safely
+            _navigationManager = StateObject(wrappedValue: NavigationContainer.NavigationManager())
+            print("✅ NavigationManager initialized")
+            
+            // Verify bundle configuration
+            verifyBundleConfiguration()
+            print("✅ Bundle configuration verified")
+            
+            // Configure services with error handling
+            configureGoogleSignIn()
+            setupNotificationHandling()
+            print("✅ Services configured")
+            
+            // Ensure all StateObjects are properly initialized
+            print("📦 StateObjects initialized:")
+            print("  - NavigationManager: \(navigationManager)")
+            print("  - NotificationManager: \(notificationManager)")
+            print("  - NotificationOnboarding: \(notificationOnboarding)")
+            print("  - AIInsightsManager: \(aiInsightsManager)")
+            
+            // Note: Onboarding status will be updated in the body using onAppear
+            
+            print("✅ MonuPlannerApp initialized successfully")
+        } catch {
+            print("❌ Error during MonuPlannerApp initialization: \(error)")
+        }
     }
 
 
@@ -56,20 +89,51 @@ struct MonuPlannerApp: App {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .background(Color(red: 0.97, green: 0.96, blue: 0.94))
                 } else if amplifyConfigured {
-                    LandingPageView()
-                        .environmentObject(authManager)
-                        .environmentObject(navigationManager)
-                        .environmentObject(notificationManager)
-                        .environmentObject(notificationOnboarding)
-                        .environmentObject(aiInsightsManager)
-                        .environmentObject(languageManager)
-                        .navigationDestination(for: NavigationContainer.NavigationTypes.NavigationDestination.self) { destination in
-                            destinationView(for: destination)
-                        }
-                        .sheet(isPresented: $notificationOnboarding.shouldShowOnboarding) {
-                            NotificationOnboardingView()
+                    ZStack {
+                        if !hasSeenWelcome {
+                            // Show welcome view for new users
+                            WelcomeView()
+                                .environmentObject(themeManager)
+                                .transition(.opacity)
+                                .onReceive(NotificationCenter.default.publisher(for: .welcomeCompleted)) { _ in
+                                    withAnimation(.easeInOut(duration: 0.5)) {
+                                        hasSeenWelcome = true
+                                    }
+                                }
+                        } else {
+                            // Show main app for returning users
+                            LandingPageView()
+                                .environmentObject(authManager)
+                                .environmentObject(navigationManager)
+                                .environmentObject(notificationManager)
                                 .environmentObject(notificationOnboarding)
+                                .environmentObject(aiInsightsManager)
+                                .environmentObject(themeManager)
+                                .navigationDestination(for: NavigationContainer.NavigationTypes.NavigationDestination.self) { destination in
+                                    destinationView(for: destination)
+                                }
+                                .sheet(isPresented: $notificationOnboarding.shouldShowOnboarding) {
+                                    NotificationOnboardingView()
+                                        .environmentObject(notificationOnboarding)
+                                }
                         }
+                        
+                        // Notification Banner
+                        NotificationBannerContainer()
+                    }
+                    .preferredColorScheme(themeManager.colorScheme)
+                    .onAppear {
+                        // Check if user has seen welcome
+                        hasSeenWelcome = UserDefaults.standard.bool(forKey: "hasSeenWelcome")
+                        
+                        // Restore authentication session
+                        authManager.restoreSession()
+                        
+                        // Update onboarding status after a short delay to ensure all managers are initialized
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                            notificationOnboarding.updateOnboardingStatus()
+                        }
+                    }
                 } else {
                     VStack(spacing: 20) {
                         ProgressView()
@@ -98,17 +162,58 @@ struct MonuPlannerApp: App {
         }
     }
 
-    // MARK: - Google Sign-In
-    private func configureGoogleSignIn() {
-        guard let path = Bundle.main.path(forResource: "GoogleService-Info", ofType: "plist"),
-              let plist = NSDictionary(contentsOfFile: path),
-              let clientId = plist["CLIENT_ID"] as? String else {
-            print("⚠️ GoogleService-Info.plist not found or CLIENT_ID missing")
+    // MARK: - Bundle Verification
+    private func verifyBundleConfiguration() {
+        guard let bundleId = Bundle.main.bundleIdentifier else {
+            print("❌ Bundle identifier not found")
             return
         }
         
-        GIDSignIn.sharedInstance.configuration = GIDConfiguration(clientID: clientId)
-        print("✅ Google Sign-In configured with client ID")
+        print("📦 Bundle ID: \(bundleId)")
+        
+        // Check if required files exist
+        let requiredFiles = ["GoogleService-Info.plist", "amplifyconfiguration.json"]
+        for fileName in requiredFiles {
+            if Bundle.main.path(forResource: fileName.replacingOccurrences(of: ".plist", with: "").replacingOccurrences(of: ".json", with: ""), ofType: fileName.hasSuffix(".plist") ? "plist" : "json") != nil {
+                print("✅ \(fileName) found")
+            } else {
+                print("⚠️ \(fileName) not found in bundle")
+            }
+        }
+    }
+    
+    // MARK: - Google Sign-In
+    private func configureGoogleSignIn() {
+        do {
+            guard let path = Bundle.main.path(forResource: "GoogleService-Info", ofType: "plist") else {
+                print("⚠️ GoogleService-Info.plist not found in bundle")
+                return
+            }
+            
+            guard let plist = NSDictionary(contentsOfFile: path) else {
+                print("⚠️ Failed to read GoogleService-Info.plist")
+                return
+            }
+            
+            guard let clientId = plist["CLIENT_ID"] as? String else {
+                print("⚠️ CLIENT_ID missing from GoogleService-Info.plist")
+                return
+            }
+            
+            GIDSignIn.sharedInstance.configuration = GIDConfiguration(clientID: clientId)
+            print("✅ Google Sign-In configured with client ID")
+        } catch {
+            print("❌ Error configuring Google Sign-In: \(error)")
+        }
+    }
+    
+    private func setupNotificationHandling() {
+        do {
+            UNUserNotificationCenter.current().delegate = NotificationHandler.shared
+            print("✅ Notification handler configured")
+        } catch {
+            print("❌ Failed to setup notification handling: \(error)")
+        }
     }
 
     // MARK: - Navigation
@@ -121,84 +226,84 @@ struct MonuPlannerApp: App {
                 .environmentObject(navigationManager)
                 .environmentObject(notificationManager)
                 .environmentObject(aiInsightsManager)
-                .environmentObject(languageManager)
+                .environmentObject(themeManager)
         case .choose:
             ChoosePageView()
                 .environmentObject(authManager)
                 .environmentObject(navigationManager)
                 .environmentObject(notificationManager)
                 .environmentObject(aiInsightsManager)
-                .environmentObject(languageManager)
+                .environmentObject(themeManager)
         case .dashboard:
             DashboardView()
                 .environmentObject(authManager)
                 .environmentObject(navigationManager)
                 .environmentObject(notificationManager)
                 .environmentObject(aiInsightsManager)
-                .environmentObject(languageManager)
+                .environmentObject(themeManager)
         case .yearlyOverview:
             YearlyOverviewView()
                 .environmentObject(authManager)
                 .environmentObject(navigationManager)
                 .environmentObject(notificationManager)
                 .environmentObject(aiInsightsManager)
-                .environmentObject(languageManager)
+                .environmentObject(themeManager)
         case .monthlyPlanner:
             MonthlyPlannerView()
                 .environmentObject(authManager)
                 .environmentObject(navigationManager)
                 .environmentObject(notificationManager)
                 .environmentObject(aiInsightsManager)
-                .environmentObject(languageManager)
+                .environmentObject(themeManager)
         case .dailyPlan:
             DailyPlanView()
                 .environmentObject(authManager)
                 .environmentObject(navigationManager)
                 .environmentObject(notificationManager)
                 .environmentObject(aiInsightsManager)
-                .environmentObject(languageManager)
+                .environmentObject(themeManager)
         case .habitTracker:
             HabitTrackerView()
                 .environmentObject(authManager)
                 .environmentObject(navigationManager)
                 .environmentObject(notificationManager)
                 .environmentObject(aiInsightsManager)
-                .environmentObject(languageManager)
+                .environmentObject(themeManager)
         case .futureVision:
             FutureVisionView()
                 .environmentObject(authManager)
                 .environmentObject(navigationManager)
                 .environmentObject(notificationManager)
                 .environmentObject(aiInsightsManager)
-                .environmentObject(languageManager)
+                .environmentObject(themeManager)
         case .bucketList:
             BucketListView()
                 .environmentObject(authManager)
                 .environmentObject(navigationManager)
                 .environmentObject(notificationManager)
                 .environmentObject(aiInsightsManager)
-                .environmentObject(languageManager)
+                .environmentObject(themeManager)
         case .pomodoro:
             PomodoroView()
                 .environmentObject(authManager)
                 .environmentObject(navigationManager)
                 .environmentObject(notificationManager)
                 .environmentObject(aiInsightsManager)
-                .environmentObject(languageManager)
+                .environmentObject(themeManager)
         case .userGuide:
             UserGuideView()
                 .environmentObject(authManager)
                 .environmentObject(navigationManager)
                 .environmentObject(notificationManager)
                 .environmentObject(aiInsightsManager)
-                .environmentObject(languageManager)
+                .environmentObject(themeManager)
         case .settings:
             SettingsPage()
                 .environmentObject(authManager)
                 .environmentObject(navigationManager)
                 .environmentObject(notificationManager)
                 .environmentObject(aiInsightsManager)
-                .environmentObject(languageManager)
+                .environmentObject(themeManager)
         }
     }
 
@@ -216,9 +321,8 @@ struct MonuPlannerApp: App {
         }
 
         do {
-            if let configPath = Bundle.main.path(forResource: "amplifyconfiguration", ofType: "json") {
-                print("✅ Found config file at: \(configPath)")
-            } else {
+            // Verify configuration file exists and is readable
+            guard let configPath = Bundle.main.path(forResource: "amplifyconfiguration", ofType: "json") else {
                 print("❌ amplifyconfiguration.json not found in bundle")
                 throw NSError(
                     domain: "com.monuplanner.amplify",
@@ -229,10 +333,33 @@ struct MonuPlannerApp: App {
                     ]
                 )
             }
+            
+            print("✅ Found config file at: \(configPath)")
+            
+            // Verify the JSON is valid by attempting to read it
+            guard let configData = try? Data(contentsOf: URL(fileURLWithPath: configPath)),
+                  let _ = try? JSONSerialization.jsonObject(with: configData) else {
+                print("❌ amplifyconfiguration.json is not valid JSON")
+                throw NSError(
+                    domain: "com.monuplanner.amplify",
+                    code: 1002,
+                    userInfo: [
+                        NSLocalizedDescriptionKey: "Invalid JSON in configuration file",
+                        NSLocalizedRecoverySuggestionErrorKey: "Check the format of amplifyconfiguration.json"
+                    ]
+                )
+            }
 
+            // Add plugins with error handling
             try Amplify.add(plugin: AWSCognitoAuthPlugin())
+            print("✅ AWSCognitoAuthPlugin added")
+            
             try Amplify.add(plugin: AWSAPIPlugin())
+            print("✅ AWSAPIPlugin added")
+            
+            // Configure Amplify
             try Amplify.configure()
+            print("✅ Amplify.configure() completed")
 
             Self.hasConfiguredAmplify = true
 
@@ -243,6 +370,7 @@ struct MonuPlannerApp: App {
             }
 
         } catch {
+            print("❌ Amplify configuration error: \(error)")
             await MainActor.run {
                 initializationError = """
                 ❌ Amplify configuration failed:
@@ -254,9 +382,72 @@ struct MonuPlannerApp: App {
                 3. Verify the JSON format is valid
                 4. If using API_KEY auth, ensure the key is set
                 """
-                print(initializationError!)
+                print(initializationError ?? "Unknown error")
             }
         }
+    }
+}
+
+// MARK: - Notification Handler
+class NotificationHandler: NSObject, UNUserNotificationCenterDelegate {
+    static let shared = NotificationHandler()
+    
+    private override init() {
+        super.init()
+    }
+    
+    // Handle notification actions
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        didReceive response: UNNotificationResponse,
+        withCompletionHandler completionHandler: @escaping () -> Void
+    ) {
+        let identifier = response.actionIdentifier
+        
+        switch identifier {
+        case "DISMISS_ACTION":
+            // Remove the notification from the notification center
+            center.removeDeliveredNotifications(withIdentifiers: [response.notification.request.identifier])
+            print("✅ Notification dismissed")
+            
+        case "SNOOZE_ACTION":
+            // Snooze the notification for 15 minutes
+            guard let content = response.notification.request.content.mutableCopy() as? UNMutableNotificationContent else {
+                print("❌ Failed to create mutable notification content")
+                completionHandler()
+                return
+            }
+            let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 15 * 60, repeats: false)
+            let request = UNNotificationRequest(
+                identifier: "snoozed_\(response.notification.request.identifier)",
+                content: content,
+                trigger: trigger
+            )
+            
+            center.add(request) { error in
+                if let error = error {
+                    print("❌ Failed to snooze notification: \(error)")
+                } else {
+                    print("✅ Notification snoozed for 15 minutes")
+                }
+            }
+            
+        default:
+            // Handle default tap action
+            print("📱 Notification tapped: \(response.notification.request.content.title)")
+        }
+        
+        completionHandler()
+    }
+    
+    // Handle notification when app is in foreground
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        willPresent notification: UNNotification,
+        withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
+    ) {
+        // Show notification even when app is in foreground
+        completionHandler([.banner, .sound, .badge])
     }
 }
 

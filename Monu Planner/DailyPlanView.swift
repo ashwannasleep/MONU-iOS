@@ -49,10 +49,9 @@ extension DailyPlanTask {
 }
 
 struct DailyPlanView: View {
-    @Environment(\.colorScheme) private var scheme
+    @EnvironmentObject var themeManager: ThemeManager
     @EnvironmentObject var navigationManager: NavigationContainer.NavigationManager
     @EnvironmentObject var authManager: AuthenticationManager
-    @EnvironmentObject var languageManager: LanguageManager
 
     @State private var selectedDate = Date()
     @State private var plans: [String:[DailyPlanTask]] = [:]
@@ -90,23 +89,32 @@ struct DailyPlanView: View {
 
     var body: some View {
         ZStack {
-            (scheme == .dark ? Color(red:0.12,green:0.12,blue:0.12) : Color(red:0.97,green:0.96,blue:0.94))
+            (themeManager.colorScheme == .dark ? Color(red:0.12,green:0.12,blue:0.12) : Color(red:0.97,green:0.96,blue:0.94))
                 .ignoresSafeArea()
 
             ScrollView {
                 VStack(spacing: 0) {
                     header
-                    weekStrip.padding(.bottom, 24)
-                    dateProgress.padding(.bottom, 24)
-                    addBox.padding(.bottom, 24)
-                    tasks.padding(.bottom, 40)
+                    weekStrip
+                        .padding(.bottom, 24)
+                    dateProgress
+                        .padding(.horizontal, 20)
+                        .padding(.bottom, 24)
+                    addBox
+                        .padding(.horizontal, 20)
+                        .padding(.bottom, 24)
+                    tasks
+                        .padding(.horizontal, 20)
+                        .padding(.bottom, 40)
                 }
-                .padding(.horizontal, 20)
             }
         }
         .navigationBarHidden(true)
         .onAppear { load() }
         .onChange(of: selectedDate) { _,_ in load() }
+        .refreshable {
+            await refreshTasks()
+        }
         .alert("Error", isPresented: $showErr) {
             Button("OK", role: .cancel) { }
         } message: {
@@ -120,7 +128,7 @@ struct DailyPlanView: View {
                 Text("MONU")
                     .font(.custom("Georgia", size: 32))
                     .fontWeight(.bold)
-                    .foregroundColor(scheme == .dark ? .white : .black)
+                    .foregroundColor(themeManager.colorScheme == .dark ? .white : .black)
             }
             .buttonStyle(.plain)
             .padding(.top, 48)
@@ -141,8 +149,8 @@ struct DailyPlanView: View {
         let start = cal.dateInterval(of: .weekOfYear, for: Date())!.start
         let days = (0..<7).compactMap { cal.date(byAdding: .day, value: $0, to: start) }
 
-        return HStack {
-            Spacer()
+        return HStack(spacing: 0) {
+            Spacer(minLength: 0)
             HStack(spacing: 16) {
                 ForEach(days, id: \.self) { d in
                     WeekDayView(date: d,
@@ -151,82 +159,97 @@ struct DailyPlanView: View {
                     }
                 }
             }
-            Spacer()
+            Spacer(minLength: 0)
         }
-        .padding(.horizontal, 20)
     }
 
     private var dateProgress: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 12) {
             Text(selectedDate.formatted(.dateTime.weekday(.wide).month(.abbreviated).day()))
-                .font(.custom("Georgia", size: 18)).italic().foregroundColor(.secondary)
+                .font(.custom("Georgia", size: 18))
+                .italic()
+                .foregroundColor(.secondary)
+                .frame(maxWidth: .infinity)
+                .multilineTextAlignment(.center)
 
-            VStack(spacing: 8) {
+            VStack(spacing: 10) {
                 GeometryReader { geo in
                     ZStack(alignment: .leading) {
                         RoundedRectangle(cornerRadius: 6)
-                            .fill(scheme == .dark ? Color(red:0.27,green:0.27,blue:0.27) : Color(red:0.90,green:0.91,blue:0.92))
+                            .fill(themeManager.colorScheme == .dark ? Color(red:0.27,green:0.27,blue:0.27) : Color(red:0.90,green:0.91,blue:0.92))
                             .frame(height: 8)
                         RoundedRectangle(cornerRadius: 6)
-                            .fill(Color(red:0.95,green:0.62,blue:0.56))
-                            .frame(width: geo.size.width * CGFloat(progress) / 100, height: 8)
+                            .fill(themeManager.accentColor)
+                            .frame(width: max(0, geo.size.width * CGFloat(progress) / 100), height: 8)
                             .animation(.easeOut(duration: 0.5), value: progress)
                     }
                 }
                 .frame(height: 8)
 
                 Text("\(progress)% complete")
-                    .font(.custom("Georgia", size: 14)).foregroundColor(.secondary)
+                    .font(.custom("Georgia", size: 14))
+                    .foregroundColor(.secondary)
             }
         }
+        .padding(16)
+        .background(themeManager.cardBackgroundColor)
+        .cornerRadius(12)
+        .shadow(color: Color.black.opacity(0.06), radius: 8, x: 0, y: 3)
     }
 
     private var addBox: some View {
         VStack(spacing: 16) {
             TextField("Add a new task...", text: $newTaskText, axis: .vertical)
                 .font(.custom("Georgia", size: 16))
-                .padding(16).frame(minHeight: 50)
-                .background(scheme == .dark ? Color(red:0.18,green:0.18,blue:0.18) : Color(red:0.98,green:0.98,blue:0.98))
-                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color(red:0.82,green:0.84,blue:0.87), lineWidth: 1))
-                .cornerRadius(12)
+                .padding(14)
+                .frame(minHeight: 50)
+                .background(themeManager.colorScheme == .dark ? Color(red:0.18,green:0.18,blue:0.18) : Color(red:0.98,green:0.98,blue:0.98))
+                .overlay(RoundedRectangle(cornerRadius: 10).stroke(themeManager.accentColor.opacity(0.25), lineWidth: 1))
+                .cornerRadius(10)
                 .onSubmit { save() }
 
             HStack(spacing: 12) {
                 pickerBtn(image: "clock", label: timeString, isEmpty: timeString.isEmpty) {
                     showTimePicker = true
-                }.sheet(isPresented: $showTimePicker) { timeSheet }
+                }
 
                 pickerBtn(image: "timer", label: durString, isEmpty: durString.isEmpty) {
                     showDurPicker = true
-                }.sheet(isPresented: $showDurPicker) { durSheet }
+                }
 
                 Button(action: save) {
                     Text("＋").font(.system(size: 20, weight: .medium)).foregroundColor(.white)
                         .frame(width: 44, height: 44)
-                        .background(Color(red:0.76,green:0.72,blue:0.64))
+                        .background(themeManager.accentColor)
                         .cornerRadius(8)
                 }
                 .disabled(newTaskText.trimmingCharacters(in: .whitespaces).isEmpty)
             }
+            .popover(isPresented: $showTimePicker) {
+                timePopup
+            }
+            .popover(isPresented: $showDurPicker) {
+                durationPopup
+            }
         }
-        .padding(20)
-        .background(scheme == .dark ? Color(red:0.18,green:0.18,blue:0.18) : .white)
+        .padding(16)
+        .background(themeManager.cardBackgroundColor)
         .cornerRadius(12)
-        .shadow(color: .black.opacity(0.08), radius: 3, x: 0, y: 1)
+        .shadow(color: .black.opacity(0.06), radius: 8, x: 0, y: 3)
     }
 
     @ViewBuilder private func pickerBtn(image: String, label: String, isEmpty: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             HStack {
                 Image(systemName: image).foregroundColor(.secondary).font(.system(size: 14))
-                Text(label).foregroundColor(isEmpty ? .secondary : (scheme == .dark ? .white : .black))
+                Text(label).foregroundColor(isEmpty ? .secondary : (themeManager.colorScheme == .dark ? .white : .black))
                 Spacer()
                 Image(systemName: "chevron.down").foregroundColor(.secondary).font(.system(size: 12))
             }
             .font(.custom("Georgia", size: 16))
             .padding(12).frame(height: 44)
-            .background(scheme == .dark ? Color(red:0.18,green:0.18,blue:0.18) : Color(red:0.98,green:0.98,blue:0.98))
-            .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color(red:0.82,green:0.84,blue:0.87), lineWidth: 1))
+            .background(themeManager.colorScheme == .dark ? Color(red:0.18,green:0.18,blue:0.18) : Color(red:0.98,green:0.98,blue:0.98))
+            .overlay(RoundedRectangle(cornerRadius: 8).stroke(themeManager.accentColor.opacity(0.3), lineWidth: 1))
             .cornerRadius(8)
         }
         .buttonStyle(.plain)
@@ -245,7 +268,7 @@ struct DailyPlanView: View {
                 .frame(maxWidth: .infinity).padding(48)
             } else {
                 ForEach(Array(todayTasks.enumerated()), id: \.element.id) { idx, task in
-                    TaskRow(task: task,
+                    DailyPlanTaskRow(task: task,
                             onToggle: { toggle(idx) },
                             onDelete: { delete(idx) })
                 }
@@ -253,13 +276,119 @@ struct DailyPlanView: View {
         }
     }
 
-    private var timeSheet: some View {
-        Text("Time picker sheet here…") // Add as needed
-    }
+    private var timePopup: some View {
+        VStack(spacing: 16) {
+            Text("Select Time")
+                .font(.system(size: 16, weight: .semibold))
+                .padding(.top, 8)
+            
+            HStack(spacing: 16) {
+                // Hour picker
+                VStack {
+                    Text("Hour")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(.secondary)
+                    
+                    Picker("Hour", selection: $selectedHour) {
+                        ForEach(1...12, id: \.self) { hour in
+                            Text("\(hour)").tag(hour)
+                        }
+                    }
+                    .pickerStyle(WheelPickerStyle())
+                    .frame(width: 60, height: 100)
+                }
+                
+                // Minute picker
+                VStack {
+                    Text("Minute")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(.secondary)
+                    
+                    Picker("Minute", selection: $selectedMinute) {
+                        ForEach(0..<60, id: \.self) { minute in
+                                Text(String(format: "%02d", minute)).tag(minute)
+                            }
+                        }
+                        .pickerStyle(WheelPickerStyle())
+                        .frame(width: 60, height: 100)
+                    }
+                    
+                    // AM/PM picker
+                    VStack {
+                        Text("AM/PM")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(.secondary)
+                        
+                        Picker("AM/PM", selection: $selectedAMPM) {
+                            Text("AM").tag("AM")
+                            Text("PM").tag("PM")
+                        }
+                        .pickerStyle(WheelPickerStyle())
+                        .frame(width: 60, height: 100)
+                    }
+                }
+                
+                Button("Done") {
+                    showTimePicker = false
+                }
+                .font(.system(size: 14, weight: .medium))
+                .padding(.bottom, 8)
+            }
+            .frame(width: 200, height: 180)
+            .background(Color(.systemBackground))
+            .cornerRadius(12)
+            .shadow(radius: 10)
+        }
 
-    private var durSheet: some View {
-        Text("Duration picker sheet here…") // Add as needed
-    }
+    private var durationPopup: some View {
+        VStack(spacing: 16) {
+            Text("Select Duration")
+                .font(.system(size: 16, weight: .semibold))
+                .padding(.top, 8)
+            
+            HStack(spacing: 16) {
+                // Hours picker
+                VStack {
+                    Text("Hours")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(.secondary)
+                    
+                    Picker("Hours", selection: $selDurH) {
+                        ForEach(0...12, id: \.self) { hour in
+                            Text("\(hour)h").tag(hour)
+                        }
+                        }
+                        .pickerStyle(WheelPickerStyle())
+                        .frame(width: 60, height: 100)
+                    }
+                    
+                    // Minutes picker
+                    VStack {
+                        Text("Minutes")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(.secondary)
+                        
+                        Picker("Minutes", selection: $selDurM) {
+                            ForEach(0..<60, id: \.self) { minute in
+                                Text("\(minute)m").tag(minute)
+                            }
+                        }
+                        .pickerStyle(WheelPickerStyle())
+                        .frame(width: 60, height: 100)
+                    }
+                }
+                
+                Button("Done") {
+                    showDurPicker = false
+                }
+                .font(.system(size: 14, weight: .medium))
+                .padding(.bottom, 8)
+            }
+            .frame(width: 200, height: 180)
+            .background(Color(.systemBackground))
+            .cornerRadius(12)
+            .shadow(radius: 10)
+        }
 
     private func load() {
         guard authManager.isAuthenticated else {
@@ -272,13 +401,23 @@ struct DailyPlanView: View {
         
         Task {
             do {
-                let q = try await Amplify.API.query(request: .list(DailyTask.self, where: DailyTask.keys.date.eq(dStr)))
+                let q = try await Amplify.API.query(request: .list(DailyTask.self))
                 await MainActor.run {
                     switch q {
                     case .success(let api):
-                        print("✅ Loaded \(api.count) tasks")
-                        let sorted = api.sorted { ($0.order ?? 0) < ($1.order ?? 0) }
+                        print("✅ Loaded \(api.count) total tasks")
+                        // Filter tasks for the selected date
+                        let filteredTasks = api.filter { task in
+                            let taskDateString = task.date.iso8601String.prefix(10)
+                            return String(taskDateString) == dStr
+                        }
+                        print("✅ Found \(filteredTasks.count) tasks for date: \(dStr)")
+                        let sorted = filteredTasks.sorted { ($0.order ?? 0) < ($1.order ?? 0) }
                         plans[todayKey] = sorted.map(DailyPlanTask.init(apiModel:))
+                        print("📋 Tasks in plans[\(todayKey)]: \(plans[todayKey]?.count ?? 0)")
+                        for task in plans[todayKey] ?? [] {
+                            print("   - \(task.text) (Time: \(task.time ?? "none"), Duration: \(task.duration ?? "none"))")
+                        }
                     case .failure(let e):
                         print("❌ Load failed: \(e)")
                         show("Failed to load: \(e)")
@@ -288,6 +427,13 @@ struct DailyPlanView: View {
                 print("❌ Load error: \(error)")
                 show("Failed to load: \(error.localizedDescription)")
             }
+        }
+    }
+    
+    private func refreshTasks() async {
+        print("🔄 Refreshing tasks...")
+        await MainActor.run {
+            load()
         }
     }
 
@@ -308,12 +454,18 @@ struct DailyPlanView: View {
             id: UUID().uuidString,
             date: todayKey,
             text: trimmed,
-            time: timeString,
+            time: timeString.isEmpty ? nil : timeString,
             duration: durString.isEmpty ? nil : durString,
             order: todayTasks.count,
             done: false,
             owner: nil // Amplify will automatically set this to the current user
         )
+        
+        print("📝 Task details:")
+        print("   - Text: \(trimmed)")
+        print("   - Time: \(timeString)")
+        print("   - Duration: \(durString)")
+        print("   - Date: \(todayKey)")
 
         guard let api = ui.toAPITask() else { 
             print("❌ Failed to create API task")
@@ -365,7 +517,7 @@ struct WeekDayView: View {
     let isSelected: Bool
     let tap: () -> Void
 
-    @Environment(\.colorScheme) private var scheme
+    @EnvironmentObject var themeManager: ThemeManager
 
     var body: some View {
         Button(action: tap) {
@@ -377,31 +529,31 @@ struct WeekDayView: View {
                 Text(date.formatted(.dateTime.day()))
                     .font(.custom("Georgia", size: 16)).fontWeight(.bold)
                     .foregroundColor(isSelected ? .white :
-                        (scheme == .dark ? .white : Color(red: 0.23, green: 0.23, blue: 0.23)))
+                        (themeManager.colorScheme == .dark ? .white : Color(red: 0.23, green: 0.23, blue: 0.23)))
             }
             .frame(width: 40, height: 50)
             .background(
                 RoundedRectangle(cornerRadius: 999)
-                    .fill(isSelected ? Color(red: 0.76, green: 0.72, blue: 0.64) : .clear)
+                    .fill(isSelected ? themeManager.accentColor : .clear)
             )
         }
         .buttonStyle(.plain)
     }
 }
-struct TaskRow: View {
+struct DailyPlanTaskRow: View {
     let task: DailyPlanTask
     let onToggle: () -> Void
     let onDelete: () -> Void
 
-    @Environment(\.colorScheme) private var scheme
+    @EnvironmentObject var themeManager: ThemeManager
     @State private var hover = false
 
     var cardBG: Color {
-        scheme == .dark ? Color(red: 0.18, green: 0.18, blue: 0.18) : .white
+        themeManager.colorScheme == .dark ? Color(red: 0.18, green: 0.18, blue: 0.18) : .white
     }
 
     var txt: Color {
-        scheme == .dark ? Color(red: 0.94, green: 0.94, blue: 0.94) :
+        themeManager.colorScheme == .dark ? Color(red: 0.94, green: 0.94, blue: 0.94) :
                           Color(red: 0.23, green: 0.23, blue: 0.23)
     }
 
@@ -411,9 +563,9 @@ struct TaskRow: View {
                 HStack(spacing: 16) {
                     ZStack {
                         Circle()
-                            .stroke(Color(red: 0.78, green: 0.75, blue: 0.70), lineWidth: 2)
+                            .stroke(themeManager.accentColor.opacity(0.3), lineWidth: 2)
                             .frame(width: 20, height: 20)
-                            .background(Circle().fill(task.done ? Color(red: 0.95, green: 0.62, blue: 0.56) : .clear))
+                            .background(Circle().fill(task.done ? themeManager.accentColor : .clear))
                         if task.done {
                             Image(systemName: "checkmark")
                                 .font(.system(size: 12, weight: .bold))
@@ -444,7 +596,7 @@ struct TaskRow: View {
                     .foregroundColor(.secondary)
                     .frame(width: 32, height: 32)
                     .background(Circle()
-                        .fill(scheme == .dark ?
+                        .fill(themeManager.colorScheme == .dark ?
                               Color(red: 0.3, green: 0.1, blue: 0.1) :
                               Color(red: 0.99, green: 0.95, blue: 0.95))
                         .opacity(hover ? 1 : 0))
@@ -468,11 +620,11 @@ struct TaskRow: View {
     @ViewBuilder private func Tag(_ txt: String) -> some View {
         Text(txt)
             .font(.custom("Georgia", size: 14))
-            .foregroundColor(scheme == .dark ?
+            .foregroundColor(themeManager.colorScheme == .dark ?
                 Color(red: 0.8, green: 0.8, blue: 0.8) :
                 Color(red: 0.33, green: 0.33, blue: 0.33))
             .padding(.horizontal, 12).padding(.vertical, 4)
-            .background(scheme == .dark ?
+            .background(themeManager.colorScheme == .dark ?
                 Color(red: 0.27, green: 0.27, blue: 0.27) :
                 Color(red: 0.94, green: 0.93, blue: 0.91))
             .cornerRadius(16)

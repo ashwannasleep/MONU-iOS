@@ -1,10 +1,10 @@
 import SwiftUI
 import Amplify
+import Foundation
 
-// MARK: - YearlyPopupView with Improved Calendar
+// MARK: - YearlyPopupView with Fixed Bugs
 struct YearlyPopupView: View {
     @State private var selectedDate: Date
-
     @State private var newTaskTitle: String = ""
     @State private var selectedTaskDate: Date
     @State private var selectedTime: Date = Date()
@@ -13,9 +13,10 @@ struct YearlyPopupView: View {
     @State private var isLoading = false
     @State private var currentMonth: Date
     @State private var showingDatePicker = false
+    @State private var showingTaskDatePicker = false
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
-    @EnvironmentObject var languageManager: LanguageManager
+    @EnvironmentObject var themeManager: ThemeManager
 
     private let calendar = Calendar.current
 
@@ -31,31 +32,49 @@ struct YearlyPopupView: View {
                 backgroundColor
                     .ignoresSafeArea()
                 
-                VStack(spacing: 0) {
-                    // Header with improved calendar
-                    improvedCalendarHeader
-                        .padding(.horizontal, 24)
-                        .padding(.top, 60)
+                ScrollView {
+                    VStack(spacing: 0) {
+                        // Header with improved calendar
+                        improvedCalendarHeader
+                            .padding(.horizontal, 24)
+                            .padding(.top, 60)
+                        
+                        // Task input section
+                        taskInputSection
+                            .padding(.horizontal, 24)
+                            .padding(.top, 24)
+                        
+                        // Tasks sections
+                        tasksView
+                            .padding(.horizontal, 24)
+                            .padding(.top, 24)
+                            .padding(.bottom, 100) // Extra bottom padding for scroll
+                    }
+                }
+                
+                // Loading overlay
+                if isLoading {
+                    Color.black.opacity(0.3)
+                        .ignoresSafeArea()
                     
-                    // Task input section
-                    taskInputSection
-                        .padding(.horizontal, 24)
-                        .padding(.top, 24)
-                    
-                    // Tasks sections
-                    tasksView
-                        .padding(.horizontal, 24)
-                        .padding(.top, 24)
-                    
-                    Spacer()
+                    VStack {
+                        ProgressView()
+                            .scaleEffect(1.2)
+                            .progressViewStyle(CircularProgressViewStyle(tint: accentColor))
+                        
+                        Text("Loading tasks...")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(.white)
+                            .padding(.top, 8)
+                    }
                 }
             }
             .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(languageManager.localizedString(.done)) { dismiss() }
-                        .font(.system(size: 16, weight: .medium))
+                    Button("Done") { dismiss() }
+                        .font(.system(size: 16, weight: .medium, design: .default))
                         .foregroundColor(accentColor)
                 }
             }
@@ -71,7 +90,7 @@ struct YearlyPopupView: View {
     }
     
     private var accentColor: Color {
-        Color(red: 0.95, green: 0.62, blue: 0.56)
+        themeManager.accentColor
     }
     
     private var cardBackgroundColor: Color {
@@ -102,8 +121,7 @@ struct YearlyPopupView: View {
                 // Month/Year title - clickable
                 Button(action: { showingDatePicker = true }) {
                     Text(currentMonth, formatter: monthYearFormatter)
-                        .font(.custom("Georgia", size: 24))
-                        .fontWeight(.bold)
+                        .font(.system(size: 24, weight: .bold, design: .default))
                         .foregroundColor(textColor)
                 }
                 .buttonStyle(PlainButtonStyle())
@@ -158,11 +176,11 @@ struct YearlyPopupView: View {
             .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 4)
         }
         .sheet(isPresented: $showingDatePicker) {
-            DatePickerView(selectedDate: $currentMonth, mode: .date)
+            DatePickerView(selectedDate: $currentMonth, mode: .month)
         }
     }
     
-    // MARK: - Calendar Helper Functions
+    // MARK: - Fixed Calendar Helper Functions
     private func previousMonth() {
         if let newDate = calendar.date(byAdding: .month, value: -1, to: currentMonth) {
             currentMonth = newDate
@@ -186,8 +204,6 @@ struct YearlyPopupView: View {
             return .white
         } else if calendar.isDate(date, inSameDayAs: Date()) {
             return accentColor
-        } else if calendar.isDateInToday(date) {
-            return accentColor
         } else {
             return textColor
         }
@@ -195,9 +211,9 @@ struct YearlyPopupView: View {
     
     private func getDateBackgroundColor(for date: Date) -> Color {
         if calendar.isDate(date, inSameDayAs: selectedTaskDate) {
-            return accentColor
+            return Color(red: 0.2, green: 0.6, blue: 0.8) // Subtle blue instead of pink
         } else if calendar.isDate(date, inSameDayAs: Date()) {
-            return accentColor.opacity(0.2)
+            return Color(red: 0.2, green: 0.6, blue: 0.8).opacity(0.2) // Subtle blue with opacity
         } else {
             return Color.clear
         }
@@ -230,9 +246,8 @@ struct YearlyPopupView: View {
         VStack(spacing: 16) {
             // Section title
             HStack {
-                Text(languageManager.localizedString(.addTask))
-                    .font(.custom("Georgia", size: 18))
-                    .fontWeight(.semibold)
+                Text("Add Task")
+                    .font(.system(size: 18, weight: .semibold, design: .default))
                     .foregroundColor(textColor)
                 Spacer()
             }
@@ -241,7 +256,7 @@ struct YearlyPopupView: View {
             VStack(spacing: 16) {
                 // Task title input
                 VStack(alignment: .leading, spacing: 8) {
-                    Text(languageManager.localizedString(.taskTitle))
+                    Text("Task Title")
                         .font(.system(size: 14, weight: .medium))
                         .foregroundColor(secondaryTextColor)
                     
@@ -252,7 +267,7 @@ struct YearlyPopupView: View {
                         .cornerRadius(12)
                         .overlay(
                             RoundedRectangle(cornerRadius: 12)
-                                .stroke(Color(red: 0.8, green: 0.8, blue: 0.8), lineWidth: 1)
+                                .stroke(themeManager.accentColor.opacity(0.3), lineWidth: 1)
                         )
                 }
                 
@@ -263,7 +278,7 @@ struct YearlyPopupView: View {
                             .font(.system(size: 14, weight: .medium))
                             .foregroundColor(secondaryTextColor)
                         
-                        Button(action: { showingDatePicker = true }) {
+                        Button(action: { showingTaskDatePicker = true }) {
                             HStack {
                                 Text(selectedTaskDate, formatter: dateFormatter)
                                     .font(.system(size: 16))
@@ -278,7 +293,7 @@ struct YearlyPopupView: View {
                             .cornerRadius(12)
                             .overlay(
                                 RoundedRectangle(cornerRadius: 12)
-                                    .stroke(Color(red: 0.8, green: 0.8, blue: 0.8), lineWidth: 1)
+                                    .stroke(themeManager.accentColor.opacity(0.3), lineWidth: 1)
                             )
                         }
                         .buttonStyle(PlainButtonStyle())
@@ -297,7 +312,7 @@ struct YearlyPopupView: View {
                             .cornerRadius(12)
                             .overlay(
                                 RoundedRectangle(cornerRadius: 12)
-                                    .stroke(Color(red: 0.8, green: 0.8, blue: 0.8), lineWidth: 1)
+                                    .stroke(themeManager.accentColor.opacity(0.3), lineWidth: 1)
                             )
                     }
                 }
@@ -323,6 +338,10 @@ struct YearlyPopupView: View {
             .cornerRadius(16)
             .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 4)
         }
+        .padding(.bottom, 8)
+        .sheet(isPresented: $showingTaskDatePicker) {
+            DatePickerView(selectedDate: $selectedTaskDate, mode: .date)
+        }
     }
     
     // MARK: - Tasks View
@@ -330,22 +349,20 @@ struct YearlyPopupView: View {
         VStack(spacing: 16) {
             // Section title
             HStack {
-                Text(languageManager.localizedString(.todayTasks))
-                    .font(.custom("Georgia", size: 18))
-                    .fontWeight(.semibold)
+                Text("Today Tasks")
+                    .font(.system(size: 18, weight: .semibold, design: .default))
                     .foregroundColor(textColor)
                 Spacer()
             }
             
             // Tasks sections
-            VStack(spacing: 16) {
+            VStack(spacing: 20) {
                 // Daily Tasks Section
                 if !dailyTasks.isEmpty {
                     VStack(alignment: .leading, spacing: 12) {
                         HStack {
-                            Text(languageManager.localizedString(.dailyPlanTasks))
-                                .font(.custom("Georgia", size: 16))
-                                .fontWeight(.semibold)
+                            Text("Daily Plan Tasks")
+                                .font(.system(size: 16, weight: .semibold, design: .default))
                                 .foregroundColor(textColor)
                             Spacer()
                             Text("\(dailyTasks.count)")
@@ -370,7 +387,7 @@ struct YearlyPopupView: View {
                 HStack(alignment: .top, spacing: 16) {
                     // To Do section
                     ImprovedTaskSectionView(
-                        title: "\(languageManager.localizedString(.yearlyTasks)) - \(languageManager.localizedString(.toDo))",
+                        title: "\("Yearly Tasks") - \("To Do")",
                         tasks: yearlyTasks.filter { !($0.done ?? false) },
                         backgroundColor: colorScheme == .dark ? Color(red: 0.15, green: 0.15, blue: 0.15) : Color(red: 0.95, green: 0.97, blue: 1.0),
                         onToggle: toggleYearlyTaskDone,
@@ -380,7 +397,7 @@ struct YearlyPopupView: View {
                     
                     // Completed section
                     ImprovedTaskSectionView(
-                        title: "\(languageManager.localizedString(.yearlyTasks)) - \(languageManager.localizedString(.completed))",
+                        title: "\("Yearly Tasks") - \("Completed")",
                         tasks: yearlyTasks.filter { $0.done ?? false },
                         backgroundColor: colorScheme == .dark ? Color(red: 0.15, green: 0.15, blue: 0.15) : Color(red: 0.97, green: 0.97, blue: 0.97),
                         onToggle: toggleYearlyTaskDone,
@@ -395,6 +412,8 @@ struct YearlyPopupView: View {
     // MARK: - Amplify Functions
     
     private func fetchTasks() {
+        guard !isLoading else { return } // Prevent multiple simultaneous requests
+        
         isLoading = true
         
         Task {
@@ -408,17 +427,26 @@ struct YearlyPopupView: View {
                 dateFormatter.dateFormat = "yyyy-MM-dd"
                 let selectedDateString = dateFormatter.string(from: selectedTaskDate)
                 let dailyResult = try await Amplify.API.query(
-                    request: .list(DailyTask.self, where: DailyTask.keys.date.eq(selectedDateString))
+                    request: .list(DailyTask.self)
                 ).get()
                 
-                DispatchQueue.main.async {
+                await MainActor.run {
                     self.yearlyTasks = yearlyResult.filter { $0.month == monthString }
-                    self.dailyTasks = Array(dailyResult)
+                    
+                    // Filter daily tasks to only show tasks for the selected date
+                    let dateFormatter = DateFormatter()
+                    dateFormatter.dateFormat = "yyyy-MM-dd"
+                    let selectedDateString = dateFormatter.string(from: selectedTaskDate)
+                    
+                    self.dailyTasks = Array(dailyResult).filter { task in
+                        let taskDateString = dateFormatter.string(from: task.date.foundationDate)
+                        return taskDateString == selectedDateString
+                    }
+                    
                     self.isLoading = false
                 }
             } catch {
-                print("Error fetching tasks: \(error)")
-                DispatchQueue.main.async {
+                await MainActor.run {
                     self.isLoading = false
                 }
             }
@@ -428,22 +456,34 @@ struct YearlyPopupView: View {
     private func addTask() {
         guard !newTaskTitle.isEmpty else { return }
         
-        let newTask = YearlyPopupTask(
-            month: monthString(from: selectedTaskDate),
-            title: newTaskTitle,
+        // Create daily task with time
+        let timeFormatter = DateFormatter()
+        timeFormatter.dateFormat = "HH:mm"
+        let timeString = timeFormatter.string(from: selectedTime)
+        
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        let dateString = dateFormatter.string(from: selectedTaskDate)
+        
+        let newDailyTask = DailyTask(
+            date: try! Temporal.Date(iso8601String: dateString),
+            text: newTaskTitle,
+            time: timeString,
+            order: dailyTasks.count,
             done: false,
             owner: nil
         )
         
         Task {
             do {
-                let result = try await Amplify.API.mutate(request: .create(newTask)).get()
-                DispatchQueue.main.async {
-                    self.yearlyTasks.append(result)
+                let result = try await Amplify.API.mutate(request: .create(newDailyTask)).get()
+                await MainActor.run {
+                    self.dailyTasks.append(result)
                     self.newTaskTitle = ""
+                    self.selectedTime = Date()
                 }
             } catch {
-                print("Error adding task: \(error)")
+                // Task creation failed silently
             }
         }
     }
@@ -455,13 +495,13 @@ struct YearlyPopupView: View {
         Task {
             do {
                 let result = try await Amplify.API.mutate(request: .update(updatedTask)).get()
-                DispatchQueue.main.async {
+                await MainActor.run {
                     if let index = self.yearlyTasks.firstIndex(where: { $0.id == task.id }) {
                         self.yearlyTasks[index] = result
                     }
                 }
             } catch {
-                print("Error toggling yearly task: \(error)")
+                // Task toggle failed silently
             }
         }
     }
@@ -470,11 +510,11 @@ struct YearlyPopupView: View {
         Task {
             do {
                 _ = try await Amplify.API.mutate(request: .delete(task))
-                DispatchQueue.main.async {
+                await MainActor.run {
                     self.yearlyTasks.removeAll { $0.id == task.id }
                 }
             } catch {
-                print("Error deleting yearly task: \(error)")
+                // Task deletion failed silently
             }
         }
     }
@@ -486,13 +526,13 @@ struct YearlyPopupView: View {
         Task {
             do {
                 let result = try await Amplify.API.mutate(request: .update(updatedTask)).get()
-                DispatchQueue.main.async {
+                await MainActor.run {
                     if let index = self.dailyTasks.firstIndex(where: { $0.id == task.id }) {
                         self.dailyTasks[index] = result
                     }
                 }
             } catch {
-                print("Error toggling daily task: \(error)")
+                // Task toggle failed silently
             }
         }
     }
@@ -501,11 +541,11 @@ struct YearlyPopupView: View {
         Task {
             do {
                 _ = try await Amplify.API.mutate(request: .delete(task))
-                DispatchQueue.main.async {
+                await MainActor.run {
                     self.dailyTasks.removeAll { $0.id == task.id }
                 }
             } catch {
-                print("Error deleting daily task: \(error)")
+                // Task deletion failed silently
             }
         }
     }
@@ -537,6 +577,7 @@ struct DailyTaskRow: View {
     let onToggle: (DailyTask) -> Void
     let onDelete: (DailyTask) -> Void
     let colorScheme: ColorScheme
+    @EnvironmentObject var themeManager: ThemeManager
     
     var body: some View {
         HStack(spacing: 12) {
@@ -544,7 +585,7 @@ struct DailyTaskRow: View {
             Button(action: { onToggle(task) }) {
                 Image(systemName: task.done == true ? "checkmark.circle.fill" : "circle")
                     .font(.system(size: 20))
-                    .foregroundColor(task.done == true ? .green : .gray)
+                    .foregroundColor(task.done == true ? themeManager.accentColor : .gray)
             }
             .buttonStyle(PlainButtonStyle())
             
@@ -637,8 +678,7 @@ struct ImprovedTaskSectionView: View {
             // Section header
             HStack {
                 Text(title)
-                    .font(.custom("Georgia", size: 16))
-                    .fontWeight(.semibold)
+                    .font(.system(size: 16, weight: .semibold, design: .default))
                     .foregroundColor(colorScheme == .dark ? .white : Color(red: 0.18, green: 0.18, blue: 0.18))
                 
                 Spacer()
@@ -655,11 +695,11 @@ struct ImprovedTaskSectionView: View {
             // Tasks list
             if tasks.isEmpty {
                 VStack(spacing: 8) {
-                    Image(systemName: title == "To Do" ? "checklist" : "checkmark.circle")
+                    Image(systemName: title.contains("To Do") ? "checklist" : "checkmark.circle")
                         .font(.system(size: 24))
                         .foregroundColor(.secondary)
                     
-                    Text(title == "To Do" ? "No tasks yet" : "No completed tasks")
+                    Text(title.contains("To Do") ? "No tasks yet" : "No completed tasks")
                         .font(.system(size: 14))
                         .foregroundColor(.secondary)
                 }
@@ -692,6 +732,7 @@ struct ImprovedYearlyTaskRow: View {
     let onToggle: (YearlyPopupTask) -> Void
     let onDelete: (YearlyPopupTask) -> Void
     let colorScheme: ColorScheme
+    @EnvironmentObject var themeManager: ThemeManager
     
     var body: some View {
         HStack(spacing: 12) {
@@ -699,7 +740,7 @@ struct ImprovedYearlyTaskRow: View {
             Button(action: { onToggle(task) }) {
                 Image(systemName: task.done ?? false ? "checkmark.circle.fill" : "circle")
                     .font(.system(size: 18))
-                    .foregroundColor(task.done ?? false ? Color(red: 0.95, green: 0.62, blue: 0.56) : .secondary)
+                                            .foregroundColor(task.done ?? false ? themeManager.accentColor : .secondary)
             }
             .buttonStyle(PlainButtonStyle())
 

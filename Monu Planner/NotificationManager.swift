@@ -11,6 +11,7 @@ class NotificationManager: ObservableObject {
     private init() {
         loadSettings()
         checkAuthorizationStatus()
+        setupNotificationCategories()
     }
     
     // MARK: - Authorization
@@ -72,6 +73,7 @@ class NotificationManager: ObservableObject {
         content.body = "Take a moment to plan your day and set your intentions"
         content.sound = .default
         content.badge = 1
+        content.categoryIdentifier = "DISMISSIBLE_CATEGORY"
         
         let calendar = Calendar.current
         let components = calendar.dateComponents([.hour, .minute], from: time)
@@ -100,6 +102,7 @@ class NotificationManager: ObservableObject {
         content.body = "Don't forget to check off your daily habits"
         content.sound = .default
         content.badge = 1
+        content.categoryIdentifier = "HABIT_CATEGORY"
         
         // Schedule for 9 PM daily
         var components = DateComponents()
@@ -127,6 +130,7 @@ class NotificationManager: ObservableObject {
         content.body = "See how you've progressed this week and plan for the next"
         content.sound = .default
         content.badge = 1
+        content.categoryIdentifier = "DISMISSIBLE_CATEGORY"
         
         // Schedule for Sunday at 6 PM
         var components = DateComponents()
@@ -155,6 +159,7 @@ class NotificationManager: ObservableObject {
         content.body = "Review your goals and track your progress"
         content.sound = .default
         content.badge = 1
+        content.categoryIdentifier = "DISMISSIBLE_CATEGORY"
         
         // Schedule for Saturday at 10 AM
         var components = DateComponents()
@@ -183,6 +188,7 @@ class NotificationManager: ObservableObject {
         content.body = "Take a deep breath and center yourself"
         content.sound = .default
         content.badge = 1
+        content.categoryIdentifier = "DISMISSIBLE_CATEGORY"
         
         // Schedule for 3 PM daily
         var components = DateComponents()
@@ -238,6 +244,7 @@ class NotificationManager: ObservableObject {
         content.title = title
         content.body = body
         content.sound = .default
+        content.categoryIdentifier = "DISMISSIBLE_CATEGORY"
         
         let trigger = UNTimeIntervalNotificationTrigger(timeInterval: date.timeIntervalSinceNow, repeats: false)
         let request = UNNotificationRequest(identifier: identifier, content: content, trigger: trigger)
@@ -255,6 +262,48 @@ class NotificationManager: ObservableObject {
     func clearAllNotifications() {
         UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
         UNUserNotificationCenter.current().removeAllDeliveredNotifications()
+    }
+    
+    // MARK: - Notification Categories
+    private func setupNotificationCategories() {
+        let dismissAction = UNNotificationAction(
+            identifier: "DISMISS_ACTION",
+            title: "Dismiss",
+            options: [.destructive]
+        )
+        
+        let snoozeAction = UNNotificationAction(
+            identifier: "SNOOZE_ACTION",
+            title: "Snooze 15 min",
+            options: []
+        )
+        
+        let dismissibleCategory = UNNotificationCategory(
+            identifier: "DISMISSIBLE_CATEGORY",
+            actions: [dismissAction, snoozeAction],
+            intentIdentifiers: [],
+            options: [.customDismissAction]
+        )
+        
+        let habitCategory = UNNotificationCategory(
+            identifier: "HABIT_CATEGORY",
+            actions: [dismissAction, snoozeAction],
+            intentIdentifiers: [],
+            options: [.customDismissAction]
+        )
+        
+        let taskCategory = UNNotificationCategory(
+            identifier: "TASK_CATEGORY",
+            actions: [dismissAction, snoozeAction],
+            intentIdentifiers: [],
+            options: [.customDismissAction]
+        )
+        
+        UNUserNotificationCenter.current().setNotificationCategories([
+            dismissibleCategory,
+            habitCategory,
+            taskCategory
+        ])
     }
 }
 
