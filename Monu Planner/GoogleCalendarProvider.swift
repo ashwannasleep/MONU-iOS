@@ -15,11 +15,60 @@ final class GoogleCalendarProvider: NSObject, @preconcurrency CalendarProvider, 
     private let cachedEventsKey = "google_calendar_cached_events"
     private let lastSyncDateKey = "google_calendar_last_sync"
     private let cacheExpirationHours: TimeInterval = 24 * 60 * 60 // 24 hours
+    
+    // User isolation
+    private var currentAppUserEmail: String?
 
     override init() {
         super.init()
         Task {
+            await restorePreviousSignIn()
             await checkExistingSignIn()
+        }
+    }
+    
+    // MARK: - User Isolation Methods
+    
+    func setCurrentAppUser(_ email: String?) async {
+        currentAppUserEmail = email
+        print("🔐 Google Calendar: Set current app user to: \(email ?? "nil")")
+        
+        // If the current Google user doesn't match the app user, disconnect
+        if let googleUser = GIDSignIn.sharedInstance.currentUser,
+           let googleEmail = googleUser.profile?.email,
+           let appEmail = currentAppUserEmail,
+           googleEmail != appEmail {
+            print("⚠️ Google Calendar: User mismatch detected!")
+            print("   App user: \(appEmail)")
+            print("   Google user: \(googleEmail)")
+            await disconnect()
+        }
+    }
+
+    private func restorePreviousSignIn() async {
+        await withCheckedContinuation { continuation in
+            GIDSignIn.sharedInstance.restorePreviousSignIn { user, error in
+                if let error = error {
+                    print("ℹ️ Google Calendar: No previous sign-in to restore (\(error.localizedDescription))")
+                } else if let user = user {
+                    print("✅ Google Calendar: Restored previous Google sign-in for \(user.profile?.name ?? "unknown")")
+                    
+                    // Check if this Google user matches the current app user
+                    if let googleEmail = user.profile?.email,
+                       let appEmail = self.currentAppUserEmail,
+                       googleEmail != appEmail {
+                        print("⚠️ Google Calendar: Restored user doesn't match app user!")
+                        print("   App user: \(appEmail)")
+                        print("   Google user: \(googleEmail)")
+                        // Don't set access token - user mismatch
+                    } else {
+                        self.accessToken = user.accessToken.tokenString
+                    }
+                } else {
+                    print("ℹ️ Google Calendar: No previous Google user found")
+                }
+                continuation.resume()
+            }
         }
     }
 
@@ -31,6 +80,17 @@ final class GoogleCalendarProvider: NSObject, @preconcurrency CalendarProvider, 
             await MainActor.run {
                 isConnected = false
             }
+            return
+        }
+
+        // Check user isolation
+        if let googleEmail = user.profile?.email,
+           let appEmail = currentAppUserEmail,
+           googleEmail != appEmail {
+            print("⚠️ Google Calendar: User mismatch! Disconnecting...")
+            print("   App user: \(appEmail)")
+            print("   Google user: \(googleEmail)")
+            await disconnect()
             return
         }
 
@@ -60,16 +120,24 @@ final class GoogleCalendarProvider: NSObject, @preconcurrency CalendarProvider, 
         
         // Check if user is already signed in but needs calendar scope
         if let user = GIDSignIn.sharedInstance.currentUser {
-            let hasCalendarScope = user.grantedScopes?.contains(calendarScope) ?? false
-            if hasCalendarScope {
-                print("✅ Google Calendar: User already has calendar access")
-                accessToken = user.accessToken.tokenString
-                await MainActor.run {
-                    isConnected = true
-                }
-                return
+            // Check user isolation first
+            if let googleEmail = user.profile?.email,
+               let appEmail = currentAppUserEmail,
+               googleEmail != appEmail {
+                print("⚠️ Google Calendar: User mismatch! Signing out current Google user...")
+                GIDSignIn.sharedInstance.signOut()
             } else {
-                print("🔐 Google Calendar: User signed in but needs calendar scope")
+                let hasCalendarScope = user.grantedScopes?.contains(calendarScope) ?? false
+                if hasCalendarScope {
+                    print("✅ Google Calendar: User already has calendar access")
+                    accessToken = user.accessToken.tokenString
+                    await MainActor.run {
+                        isConnected = true
+                    }
+                    return
+                } else {
+                    print("🔐 Google Calendar: User signed in but needs calendar scope")
+                }
             }
         }
         
@@ -102,6 +170,17 @@ final class GoogleCalendarProvider: NSObject, @preconcurrency CalendarProvider, 
             guard user.grantedScopes?.contains(calendarScope) == true else {
                 print("❌ Google Calendar: Calendar access not granted")
                 throw CalendarError.authorizationFailed("Calendar access not granted")
+            }
+
+            // Verify user isolation
+            if let googleEmail = user.profile?.email,
+               let appEmail = currentAppUserEmail,
+               googleEmail != appEmail {
+                print("⚠️ Google Calendar: User mismatch after sign-in!")
+                print("   App user: \(appEmail)")
+                print("   Google user: \(googleEmail)")
+                GIDSignIn.sharedInstance.signOut()
+                throw CalendarError.authorizationFailed("Google account doesn't match app user")
             }
 
             accessToken = user.accessToken.tokenString

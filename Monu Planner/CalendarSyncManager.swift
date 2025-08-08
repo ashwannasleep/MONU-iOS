@@ -55,6 +55,11 @@ final class CalendarSyncManager: ObservableObject {
     
     // MARK: - Public API with Enhanced Error Handling
     
+    func setCurrentAppUser(_ email: String?) async {
+        print("🔐 CalendarSyncManager: Setting current app user to: \(email ?? "nil")")
+        await googleProvider.setCurrentAppUser(email)
+    }
+    
     func connectApple() async {
         clearError()
         isLoading = true

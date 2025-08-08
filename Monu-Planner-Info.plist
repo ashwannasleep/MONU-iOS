@@ -15,5 +15,9 @@
 			</array>
 		</dict>
 	</array>
+	<key>NSCalendarsUsageDescription</key>
+	<string>MONU needs access to your calendars to display and sync your events.</string>
+	<key>NSRemindersUsageDescription</key>
+	<string>MONU can read reminders to help you plan (optional).</string>
 </dict>
 </plist>

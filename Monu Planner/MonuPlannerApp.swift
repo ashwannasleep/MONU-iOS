@@ -17,6 +17,7 @@ struct MonuPlannerApp: App {
     @StateObject private var notificationOnboarding = NotificationOnboardingManager.shared
     @StateObject private var aiInsightsManager = AIInsightsManager.shared
     @StateObject private var themeManager = ThemeManager.shared
+    @StateObject private var calendarSyncManager = CalendarSyncManager()
     @State private var amplifyConfigured = false
     @State private var initializationError: String?
     @State private var hasSeenWelcome = false
@@ -109,6 +110,7 @@ struct MonuPlannerApp: App {
                                 .environmentObject(notificationOnboarding)
                                 .environmentObject(aiInsightsManager)
                                 .environmentObject(themeManager)
+                                .environmentObject(calendarSyncManager)
                                 .navigationDestination(for: NavigationContainer.NavigationTypes.NavigationDestination.self) { destination in
                                     destinationView(for: destination)
                                 }
@@ -121,13 +123,26 @@ struct MonuPlannerApp: App {
                         // Notification Banner
                         NotificationBannerContainer()
                     }
+                    .environmentObject(themeManager)
+                    .environmentObject(calendarSyncManager)
                     .preferredColorScheme(themeManager.colorScheme)
                     .onAppear {
+                        if !amplifyConfigured {
+                            configureAmplify()
+                        }
+                        
+                        // Connect calendar sync manager to auth manager for user isolation
+                        Task {
+                            await authManager.setCalendarSyncManager(calendarSyncManager)
+                        }
+                        
+                        // Check authentication status
+                        Task {
+                            await authManager.checkAuthenticationStatus()
+                        }
+                        
                         // Check if user has seen welcome
                         hasSeenWelcome = UserDefaults.standard.bool(forKey: "hasSeenWelcome")
-                        
-                        // Restore authentication session
-                        authManager.restoreSession()
                         
                         // Update onboarding status after a short delay to ensure all managers are initialized
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
@@ -227,6 +242,7 @@ struct MonuPlannerApp: App {
                 .environmentObject(notificationManager)
                 .environmentObject(aiInsightsManager)
                 .environmentObject(themeManager)
+                .environmentObject(calendarSyncManager)
         case .choose:
             ChoosePageView()
                 .environmentObject(authManager)
@@ -234,6 +250,7 @@ struct MonuPlannerApp: App {
                 .environmentObject(notificationManager)
                 .environmentObject(aiInsightsManager)
                 .environmentObject(themeManager)
+                .environmentObject(calendarSyncManager)
         case .dashboard:
             DashboardView()
                 .environmentObject(authManager)
@@ -241,6 +258,7 @@ struct MonuPlannerApp: App {
                 .environmentObject(notificationManager)
                 .environmentObject(aiInsightsManager)
                 .environmentObject(themeManager)
+                .environmentObject(calendarSyncManager)
         case .yearlyOverview:
             YearlyOverviewView()
                 .environmentObject(authManager)
@@ -248,6 +266,7 @@ struct MonuPlannerApp: App {
                 .environmentObject(notificationManager)
                 .environmentObject(aiInsightsManager)
                 .environmentObject(themeManager)
+                .environmentObject(calendarSyncManager)
         case .monthlyPlanner:
             MonthlyPlannerView()
                 .environmentObject(authManager)
@@ -255,6 +274,7 @@ struct MonuPlannerApp: App {
                 .environmentObject(notificationManager)
                 .environmentObject(aiInsightsManager)
                 .environmentObject(themeManager)
+                .environmentObject(calendarSyncManager)
         case .dailyPlan:
             DailyPlanView()
                 .environmentObject(authManager)
@@ -262,6 +282,7 @@ struct MonuPlannerApp: App {
                 .environmentObject(notificationManager)
                 .environmentObject(aiInsightsManager)
                 .environmentObject(themeManager)
+                .environmentObject(calendarSyncManager)
         case .habitTracker:
             HabitTrackerView()
                 .environmentObject(authManager)
@@ -269,6 +290,7 @@ struct MonuPlannerApp: App {
                 .environmentObject(notificationManager)
                 .environmentObject(aiInsightsManager)
                 .environmentObject(themeManager)
+                .environmentObject(calendarSyncManager)
         case .futureVision:
             FutureVisionView()
                 .environmentObject(authManager)
@@ -276,6 +298,7 @@ struct MonuPlannerApp: App {
                 .environmentObject(notificationManager)
                 .environmentObject(aiInsightsManager)
                 .environmentObject(themeManager)
+                .environmentObject(calendarSyncManager)
         case .bucketList:
             BucketListView()
                 .environmentObject(authManager)
@@ -283,6 +306,7 @@ struct MonuPlannerApp: App {
                 .environmentObject(notificationManager)
                 .environmentObject(aiInsightsManager)
                 .environmentObject(themeManager)
+                .environmentObject(calendarSyncManager)
         case .pomodoro:
             PomodoroView()
                 .environmentObject(authManager)
@@ -290,6 +314,7 @@ struct MonuPlannerApp: App {
                 .environmentObject(notificationManager)
                 .environmentObject(aiInsightsManager)
                 .environmentObject(themeManager)
+                .environmentObject(calendarSyncManager)
         case .userGuide:
             UserGuideView()
                 .environmentObject(authManager)
@@ -297,6 +322,7 @@ struct MonuPlannerApp: App {
                 .environmentObject(notificationManager)
                 .environmentObject(aiInsightsManager)
                 .environmentObject(themeManager)
+                .environmentObject(calendarSyncManager)
         case .settings:
             SettingsPage()
                 .environmentObject(authManager)
@@ -304,6 +330,7 @@ struct MonuPlannerApp: App {
                 .environmentObject(notificationManager)
                 .environmentObject(aiInsightsManager)
                 .environmentObject(themeManager)
+                .environmentObject(calendarSyncManager)
         }
     }
 
