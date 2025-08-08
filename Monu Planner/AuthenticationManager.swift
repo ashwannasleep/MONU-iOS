@@ -85,44 +85,42 @@ class AuthenticationManager: ObservableObject {
         errorMessage = ""
     }
     
-    func restoreSession() {
+    func restoreSession() async {
         print("🔄 Attempting to restore session...")
-        Task {
-            do {
-                let session = try await Amplify.Auth.fetchAuthSession()
-                if session.isSignedIn {
-                    let user = try await Amplify.Auth.getCurrentUser()
-                    let storedName = UserDefaults.standard.string(forKey: "monu_name")
-                    
-                    // Store email from username when present
-                    if user.username.contains("@") {
-                        UserDefaults.standard.set(user.username, forKey: "user_email")
-                        print("📧 Stored email from username: \(user.username)")
-                    }
-                    await fetchAndStoreEmail()
-                    
-                    await MainActor.run {
-                        self.isAuthenticated = true
-                        self.currentUser = user
-                        self.displayName = storedName
-                        print("✅ Session restored successfully")
-                        
-                        // Set current app user for Google Calendar isolation
-                        if let email = UserDefaults.standard.string(forKey: "user_email") {
-                            await self.calendarSyncManager?.setCurrentAppUser(email)
-                        }
-                    }
-                } else {
-                    await MainActor.run {
-                        self.isAuthenticated = false
-                        print("❌ No valid session to restore")
-                    }
+        do {
+            let session = try await Amplify.Auth.fetchAuthSession()
+            if session.isSignedIn {
+                let user = try await Amplify.Auth.getCurrentUser()
+                let storedName = UserDefaults.standard.string(forKey: "monu_name")
+                
+                // Store email from username when present
+                if user.username.contains("@") {
+                    UserDefaults.standard.set(user.username, forKey: "user_email")
+                    print("📧 Stored email from username: \(user.username)")
                 }
-            } catch {
-                print("❌ Session restoration failed: \(error)")
+                await fetchAndStoreEmail()
+                
+                await MainActor.run {
+                    self.isAuthenticated = true
+                    self.currentUser = user
+                    self.displayName = storedName
+                    print("✅ Session restored successfully")
+                }
+                
+                // Set current app user for Google Calendar isolation
+                if let email = UserDefaults.standard.string(forKey: "user_email") {
+                    await self.calendarSyncManager?.setCurrentAppUser(email)
+                }
+            } else {
                 await MainActor.run {
                     self.isAuthenticated = false
+                    print("❌ No valid session to restore")
                 }
+            }
+        } catch {
+            print("❌ Session restoration failed: \(error)")
+            await MainActor.run {
+                self.isAuthenticated = false
             }
         }
     }
@@ -140,39 +138,37 @@ class AuthenticationManager: ObservableObject {
         }
     }
 
-    func signOut(navigationManager: NavigationContainer.NavigationManager? = nil) {
-        Task {
-            do {
-                // Sign out from Google first
-                GIDSignIn.sharedInstance.signOut()
-                print("🚪 Signed out from Google")
+    func signOut(navigationManager: NavigationContainer.NavigationManager? = nil) async {
+        do {
+            // Sign out from Google first
+            GIDSignIn.sharedInstance.signOut()
+            print("🚪 Signed out from Google")
+            
+            // Then sign out from Amplify
+            let result = await Amplify.Auth.signOut()
+            print("🚪 Sign out result: \(result)")
+            
+            // Clear current app user for Google Calendar isolation
+            await self.calendarSyncManager?.setCurrentAppUser(nil)
+            
+            await MainActor.run {
+                // Clear authentication state
+                self.isAuthenticated = false
+                self.currentUser = nil
+                self.displayName = nil
+                self.userEmail = nil
                 
-                // Then sign out from Amplify
-                let result = await Amplify.Auth.signOut()
-                print("🚪 Sign out result: \(result)")
+                // Clear stored data
+                UserDefaults.standard.removeObject(forKey: "monu_name")
+                UserDefaults.standard.removeObject(forKey: "user_email")
                 
-                await MainActor.run {
-                    // Clear authentication state
-                    self.isAuthenticated = false
-                    self.currentUser = nil
-                    self.displayName = nil
-                    self.userEmail = nil
-                    
-                    // Clear current app user for Google Calendar isolation
-                    await self.calendarSyncManager?.setCurrentAppUser(nil)
-                    
-                    // Clear stored data
-                    UserDefaults.standard.removeObject(forKey: "monu_name")
-                    UserDefaults.standard.removeObject(forKey: "user_email")
-                    
-                    print("✅ Sign out completed successfully")
-                }
-            } catch {
-                print("Sign out error: \(error)")
-                await MainActor.run {
-                    self.errorMessage = "Failed to sign out: \(error.localizedDescription)"
-                    self.hasError = true
-                }
+                print("✅ Sign out completed successfully")
+            }
+        } catch {
+            print("Sign out error: \(error)")
+            await MainActor.run {
+                self.errorMessage = "Failed to sign out: \(error.localizedDescription)"
+                self.hasError = true
             }
         }
     }

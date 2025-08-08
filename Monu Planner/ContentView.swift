@@ -26,7 +26,7 @@ struct ContentView: View {
                                             // Store the email for display in settings
                                             UserDefaults.standard.set(email, forKey: "user_email")
                                             await MainActor.run {
-                                                authManager.checkAuthenticationStatus()
+                                                await authManager.checkAuthenticationStatus()
                                             }
                                         } catch {
                                             print("❌ Sign in failed: \(error)")

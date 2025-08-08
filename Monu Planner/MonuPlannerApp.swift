@@ -342,7 +342,7 @@ struct MonuPlannerApp: App {
             print("⚠️ Amplify already configured, skipping...")
             await MainActor.run {
                 amplifyConfigured = true
-                authManager.checkAuthenticationStatus()
+                await authManager.checkAuthenticationStatus()
             }
             return
         }
@@ -392,7 +392,7 @@ struct MonuPlannerApp: App {
 
             await MainActor.run {
                 amplifyConfigured = true
-                authManager.checkAuthenticationStatus()
+                await authManager.checkAuthenticationStatus()
                 print("✅ Amplify configured successfully")
             }
 

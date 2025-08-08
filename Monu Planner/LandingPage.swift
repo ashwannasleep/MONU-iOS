@@ -238,7 +238,7 @@ struct LandingPageView: View {
                     let displayName = await getUserDisplayName()
                     await MainActor.run {
                         authManager.isAuthenticated = true
-                        authManager.checkAuthenticationStatus()
+                        await authManager.checkAuthenticationStatus()
                         showQuoteAndPrepare(displayName)
                     }
                 }
@@ -338,7 +338,7 @@ struct LandingPageView: View {
                     let displayName = await getUserDisplayName()
                     await MainActor.run {
                         authManager.isAuthenticated = true
-                        authManager.checkAuthenticationStatus()
+                        await authManager.checkAuthenticationStatus()
                         showQuoteAndPrepare(displayName.isEmpty ? username : displayName)
                     }
                 }
@@ -368,7 +368,7 @@ struct LandingPageView: View {
                 
                 await MainActor.run {
                     authManager.isAuthenticated = true
-                    authManager.checkAuthenticationStatus()
+                    await authManager.checkAuthenticationStatus()
                 }
                 
             } catch {
@@ -384,7 +384,7 @@ struct LandingPageView: View {
                     
                     await MainActor.run {
                         authManager.isAuthenticated = true
-                        authManager.checkAuthenticationStatus()
+                        await authManager.checkAuthenticationStatus()
                     }
                 } else {
                     await MainActor.run {
