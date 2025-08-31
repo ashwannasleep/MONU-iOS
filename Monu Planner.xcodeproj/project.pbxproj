@@ -25,6 +25,7 @@
 		AA2EFCD82E42DFE80098E3BB /* AWSAPIPlugin in Frameworks */ = {isa = PBXBuildFile; productRef = AA2EFCD72E42DFE80098E3BB /* AWSAPIPlugin */; };
 		AA2EFCDA2E42DFE80098E3BB /* AWSCognitoAuthPlugin in Frameworks */ = {isa = PBXBuildFile; productRef = AA2EFCD92E42DFE80098E3BB /* AWSCognitoAuthPlugin */; };
 		AA2EFCDC2E42E0DD0098E3BB /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = AA2EFCDB2E42E0DD0098E3BB /* GoogleSignIn */; };
+		AAC45D922E5D11DD00CA840B /* GoogleAPIClientForRESTCore in Frameworks */ = {isa = PBXBuildFile; productRef = AAC45D912E5D11DD00CA840B /* GoogleAPIClientForRESTCore */; };
 		C14AAAF663C515F4BD9497A2 /* UserSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56FDDDAECEC29E17E67245B3 /* UserSettings.swift */; };
 		C509B6973CF2B5C42B2BC60A /* Habit+Schema.swift in Sources */ = {isa = PBXBuildFile; fileRef = 302FA8DC3B9AF648A5707D90 /* Habit+Schema.swift */; };
 		CAE8F3D1A6690386079412A1 /* YearlyGoal+Schema.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F1CF11F938D3F885F440DCA /* YearlyGoal+Schema.swift */; };
@@ -87,16 +88,6 @@
 			path = "Monu Planner";
 			sourceTree = "<group>";
 		};
-		AA298B482E05F65900311F1F /* Monu PlannerTests */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = "Monu PlannerTests";
-			sourceTree = "<group>";
-		};
-		AA298B522E05F65900311F1F /* Monu PlannerUITests */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = "Monu PlannerUITests";
-			sourceTree = "<group>";
-		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -106,6 +97,7 @@
 			files = (
 				AA2EFCD82E42DFE80098E3BB /* AWSAPIPlugin in Frameworks */,
 				AA2EFCDA2E42DFE80098E3BB /* AWSCognitoAuthPlugin in Frameworks */,
+				AAC45D922E5D11DD00CA840B /* GoogleAPIClientForRESTCore in Frameworks */,
 				AA2EFCDC2E42E0DD0098E3BB /* GoogleSignIn in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -159,12 +151,9 @@
 			isa = PBXGroup;
 			children = (
 				AA298B392E05F65900311F1F /* Monu Planner */,
-				AA298B482E05F65900311F1F /* Monu PlannerTests */,
-				AA298B522E05F65900311F1F /* Monu PlannerUITests */,
 				AA298B382E05F65900311F1F /* Products */,
 				E4CBC952D93DAD69CF9369AF /* AmplifyConfig */,
 				06EB45353F2698D584D7DDB6 /* AmplifyModels */,
-				AAB790612E42BDFA00CCC49C /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
@@ -176,13 +165,6 @@
 				AA298B4F2E05F65900311F1F /* Monu PlannerUITests.xctest */,
 			);
 			name = Products;
-			sourceTree = "<group>";
-		};
-		AAB790612E42BDFA00CCC49C /* Frameworks */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			name = Frameworks;
 			sourceTree = "<group>";
 		};
 		E4CBC952D93DAD69CF9369AF /* AmplifyConfig */ = {
@@ -217,6 +199,7 @@
 				AA2EFCD72E42DFE80098E3BB /* AWSAPIPlugin */,
 				AA2EFCD92E42DFE80098E3BB /* AWSCognitoAuthPlugin */,
 				AA2EFCDB2E42E0DD0098E3BB /* GoogleSignIn */,
+				AAC45D912E5D11DD00CA840B /* GoogleAPIClientForRESTCore */,
 			);
 			productName = "Monu Planner";
 			productReference = AA298B372E05F65900311F1F /* Monu Planner.app */;
@@ -234,9 +217,6 @@
 			);
 			dependencies = (
 				AA298B472E05F65900311F1F /* PBXTargetDependency */,
-			);
-			fileSystemSynchronizedGroups = (
-				AA298B482E05F65900311F1F /* Monu PlannerTests */,
 			);
 			name = "Monu PlannerTests";
 			packageProductDependencies = (
@@ -257,9 +237,6 @@
 			);
 			dependencies = (
 				AA298B512E05F65900311F1F /* PBXTargetDependency */,
-			);
-			fileSystemSynchronizedGroups = (
-				AA298B522E05F65900311F1F /* Monu PlannerUITests */,
 			);
 			name = "Monu PlannerUITests";
 			packageProductDependencies = (
@@ -303,6 +280,7 @@
 			packageReferences = (
 				AAB7905C2E42B97000CCC49C /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
 				AA2EFCD62E42DFE80098E3BB /* XCRemoteSwiftPackageReference "amplify-swift" */,
+				AAC45D902E5D11DD00CA840B /* XCRemoteSwiftPackageReference "google-api-objectivec-client-for-rest" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = AA298B382E05F65900311F1F /* Products */;
@@ -535,6 +513,7 @@
 				INFOPLIST_FILE = "Monu-Planner-Info.plist";
 				INFOPLIST_KEY_CFBundleURLTypes = "{\n    CFBundleTypeRole = Editor;\n    CFBundleURLSchemes =     (\n        \"com.googleusercontent.apps.632636220479-va5ia9h1850mlu545rjiejrhm3aq283g\"\n    );\n}";
 				INFOPLIST_KEY_GIDClientID = "632636220479-va5ia9h1850mlu545rjiejrhm3aq283g.apps.googleusercontent.com";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -549,15 +528,16 @@
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 15.5;
-				MARKETING_VERSION = 1.1.2;
+				MARKETING_VERSION = 1.1.3;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.ashleychang.Monu-Planner";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
 				SDKROOT = auto;
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2,7";
+				TARGETED_DEVICE_FAMILY = 1;
 				XROS_DEPLOYMENT_TARGET = 2.5;
 			};
 			name = Debug;
@@ -578,6 +558,7 @@
 				INFOPLIST_FILE = "Monu-Planner-Info.plist";
 				INFOPLIST_KEY_CFBundleURLTypes = "{\n    CFBundleTypeRole = Editor;\n    CFBundleURLSchemes =     (\n        \"com.googleusercontent.apps.632636220479-va5ia9h1850mlu545rjiejrhm3aq283g\"\n    );\n}";
 				INFOPLIST_KEY_GIDClientID = "632636220479-va5ia9h1850mlu545rjiejrhm3aq283g.apps.googleusercontent.com";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -592,17 +573,16 @@
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 15.5;
-				MARKETING_VERSION = 1.1.2;
-				"MARKETING_VERSION[sdk=iphoneos*]" = 1.1.2;
-				"MARKETING_VERSION[sdk=macosx*]" = 1.1.2;
+				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.ashleychang.Monu-Planner";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
 				SDKROOT = auto;
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2,7";
+				TARGETED_DEVICE_FAMILY = 1;
 				XROS_DEPLOYMENT_TARGET = 2.5;
 			};
 			name = Release;
@@ -759,6 +739,14 @@
 				minimumVersion = 9.0.0;
 			};
 		};
+		AAC45D902E5D11DD00CA840B /* XCRemoteSwiftPackageReference "google-api-objectivec-client-for-rest" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/google/google-api-objectivec-client-for-rest";
+			requirement = {
+				branch = main;
+				kind = branch;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -776,6 +764,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = AAB7905C2E42B97000CCC49C /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
 			productName = GoogleSignIn;
+		};
+		AAC45D912E5D11DD00CA840B /* GoogleAPIClientForRESTCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AAC45D902E5D11DD00CA840B /* XCRemoteSwiftPackageReference "google-api-objectivec-client-for-rest" */;
+			productName = GoogleAPIClientForRESTCore;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

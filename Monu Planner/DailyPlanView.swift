@@ -2,6 +2,72 @@ import SwiftUI
 import Amplify
 import Foundation
 
+// MARK: - Utilities for Time Formatting
+fileprivate enum TimeFormatterUtil {
+    /// Convert "h:mm AM/PM" → "HH:mm"
+    static func displayTo24h(_ display: String) -> String? {
+        // Try common forms: "h:mm a", "h:m a" (just in case)
+        let fmts = ["h:mm a", "h:m a", "h a"]
+        for f in fmts {
+            let df = DateFormatter()
+            df.dateFormat = f
+            df.locale = Locale(identifier: "en_US_POSIX")
+            df.timeZone = .current
+            if let date = df.date(from: display.trimmingCharacters(in: .whitespaces)) {
+                let out = DateFormatter()
+                out.dateFormat = "HH:mm"
+                out.locale = df.locale
+                out.timeZone = df.timeZone
+                return out.string(from: date)
+            }
+        }
+        return nil
+    }
+
+    /// Convert "HH:mm" → "h:mm AM/PM"
+    static func h24ToDisplay(_ h24: String) -> String? {
+        let df = DateFormatter()
+        df.dateFormat = "HH:mm"
+        df.locale = Locale(identifier: "en_US_POSIX")
+        df.timeZone = .current
+        if let date = df.date(from: h24.trimmingCharacters(in: .whitespaces)) {
+            let out = DateFormatter()
+            out.dateFormat = "h:mm a"
+            out.locale = df.locale
+            out.timeZone = df.timeZone
+            return out.string(from: date)
+        }
+        return nil
+    }
+
+    /// Normalize any incoming time string to "h:mm AM/PM" for display.
+    static func normalizeForDisplay(_ maybeTime: String?) -> String? {
+        guard let t = maybeTime, !t.isEmpty else { return nil }
+        // If it already looks like AM/PM, keep it but also round-trip to clean spacing
+        if t.uppercased().contains("AM") || t.uppercased().contains("PM") {
+            // Re-parse as display → 24h → display (to normalize)
+            if let h24 = displayTo24h(t), let disp = h24ToDisplay(h24) { return disp }
+            return t
+        }
+        // Otherwise assume 24h and convert to display
+        if let disp = h24ToDisplay(t) { return disp }
+        return t
+    }
+
+    /// Build "h:mm AM/PM" from wheel selections
+    static func fromPickers(hour: Int, minute: Int, ampm: String) -> String {
+        String(format: "%d:%02d %@", hour, minute, ampm)
+    }
+
+    /// Build canonical "HH:mm" for storage from wheel selections
+    static func to24h(hour: Int, minute: Int, ampm: String) -> String {
+        var h = hour % 12
+        if ampm.uppercased() == "PM" { h += 12 }
+        return String(format: "%02d:%02d", h, minute)
+    }
+}
+
+// MARK: - DailyPlanTask
 struct DailyPlanTask: Identifiable, Equatable {
     let id: String
     var date: String
@@ -25,21 +91,36 @@ extension DailyPlanTask {
         self.id = apiModel.id
         self.date = apiModel.date.iso8601String
         self.text = apiModel.text
-        self.time = apiModel.time
+        // Normalize any incoming time string for UI display
+        self.time = TimeFormatterUtil.normalizeForDisplay(apiModel.time)
         self.duration = apiModel.duration
         self.order = apiModel.order ?? 0
         self.done = apiModel.done ?? false
         self.owner = apiModel.owner
     }
 
+    /// Convert UI task back to API model
+    /// - Stores time canonically as "HH:mm" (if a time exists).
     func toAPITask() -> DailyTask? {
         let dateOnlyString = String(self.date.prefix(10))
         guard let dateOnly = try? Temporal.Date(iso8601String: dateOnlyString) else { return nil }
+
+        // Normalize time -> "HH:mm" if possible
+        var apiTime: String? = nil
+        if let t = self.time, !t.isEmpty {
+            if let h24 = TimeFormatterUtil.displayTo24h(t) {
+                apiTime = h24
+            } else {
+                // If it's already "HH:mm" or unrecognized, pass through
+                apiTime = t
+            }
+        }
+
         return DailyTask(
             id: self.id,
             date: dateOnly,
             text: self.text,
-            time: self.time,
+            time: apiTime,
             duration: self.duration,
             order: self.order,
             done: self.done,
@@ -76,10 +157,7 @@ struct DailyPlanView: View {
         return Int(round(Double(doneCnt)/Double(todayTasks.count)*100))
     }
 
-    private var timeString: String {
-        String(format:"%d:%02d %@", selectedHour, selectedMinute, selectedAMPM)
-    }
-
+    private var timeString: String { String(format:"%d:%02d %@", selectedHour, selectedMinute, selectedAMPM) }
     private var durString: String {
         if selDurH > 0 && selDurM > 0 { return "\(selDurH)h \(selDurM)m" }
         if selDurH > 0               { return "\(selDurH)h" }
@@ -108,6 +186,44 @@ struct DailyPlanView: View {
                         .padding(.bottom, 40)
                 }
             }
+
+            // ======= COMPACT FLOATING PICKERS (no sheet/popover) =======
+            if showTimePicker || showDurPicker {
+                // background tap to dismiss
+                Color.black.opacity(0.001)
+                    .ignoresSafeArea()
+                    .onTapGesture {
+                        showTimePicker = false
+                        showDurPicker = false
+                    }
+
+                VStack {
+                    Spacer()
+                    VStack(spacing: 16) {
+                        HStack {
+                            Text(showTimePicker ? "Select Time" : "Select Duration")
+                                .font(.system(size: 16, weight: .semibold))
+                            Spacer()
+                            Button("Done") {
+                                showTimePicker = false
+                                showDurPicker  = false
+                            }
+                            .font(.system(size: 14, weight: .medium))
+                        }
+
+                        if showTimePicker { timeRoller } else { durationRoller }
+                    }
+                    .padding(16)
+                    .frame(maxWidth: 340)
+                    .background(themeManager.cardBackgroundColor)
+                    .cornerRadius(14)
+                    .shadow(color: .black.opacity(0.2), radius: 16, x: 0, y: 8)
+                    .padding(.bottom, 40)
+                }
+                .transition(.scale.combined(with: .opacity))
+                .animation(.spring(response: 0.28, dampingFraction: 0.9), value: showTimePicker || showDurPicker)
+            }
+            // ============================================================
         }
         .navigationBarHidden(true)
         .onAppear { load() }
@@ -122,6 +238,7 @@ struct DailyPlanView: View {
         }
     }
 
+    // MARK: - Header etc (unchanged)
     private var header: some View {
         VStack(spacing: 0) {
             Button { navigationManager.navigateToRoot() } label: {
@@ -210,11 +327,13 @@ struct DailyPlanView: View {
 
             HStack(spacing: 12) {
                 pickerBtn(image: "clock", label: timeString, isEmpty: timeString.isEmpty) {
-                    showTimePicker = true
+                    showDurPicker = false
+                    withAnimation { showTimePicker = true }
                 }
 
                 pickerBtn(image: "timer", label: durString, isEmpty: durString.isEmpty) {
-                    showDurPicker = true
+                    showTimePicker = false
+                    withAnimation { showDurPicker = true }
                 }
 
                 Button(action: save) {
@@ -224,12 +343,6 @@ struct DailyPlanView: View {
                         .cornerRadius(8)
                 }
                 .disabled(newTaskText.trimmingCharacters(in: .whitespaces).isEmpty)
-            }
-            .popover(isPresented: $showTimePicker) {
-                timePopup
-            }
-            .popover(isPresented: $showDurPicker) {
-                durationPopup
             }
         }
         .padding(16)
@@ -276,179 +389,90 @@ struct DailyPlanView: View {
         }
     }
 
-    private var timePopup: some View {
-        VStack(spacing: 16) {
-            Text("Select Time")
-                .font(.system(size: 16, weight: .semibold))
-                .padding(.top, 8)
-            
-            HStack(spacing: 16) {
-                // Hour picker
-                VStack {
-                    Text("Hour")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(.secondary)
-                    
-                    Picker("Hour", selection: $selectedHour) {
-                        ForEach(1...12, id: \.self) { hour in
-                            Text("\(hour)").tag(hour)
-                        }
-                    }
-                    .pickerStyle(WheelPickerStyle())
-                    .frame(width: 60, height: 100)
+    // MARK: - Floating rollers
+    private var timeRoller: some View {
+        HStack(spacing: 16) {
+            VStack {
+                Text("Hour").font(.system(size: 12, weight: .medium)).foregroundColor(.secondary)
+                Picker("Hour", selection: $selectedHour) {
+                    ForEach(1...12, id: \.self) { Text("\($0)").tag($0) }
                 }
-                
-                // Minute picker
-                VStack {
-                    Text("Minute")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(.secondary)
-                    
-                    Picker("Minute", selection: $selectedMinute) {
-                        ForEach(0..<60, id: \.self) { minute in
-                                Text(String(format: "%02d", minute)).tag(minute)
-                            }
-                        }
-                        .pickerStyle(WheelPickerStyle())
-                        .frame(width: 60, height: 100)
-                    }
-                    
-                    // AM/PM picker
-                    VStack {
-                        Text("AM/PM")
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundColor(.secondary)
-                        
-                        Picker("AM/PM", selection: $selectedAMPM) {
-                            Text("AM").tag("AM")
-                            Text("PM").tag("PM")
-                        }
-                        .pickerStyle(WheelPickerStyle())
-                        .frame(width: 60, height: 100)
-                    }
-                }
-                
-                Button("Done") {
-                    showTimePicker = false
-                }
-                .font(.system(size: 14, weight: .medium))
-                .padding(.bottom, 8)
+                .pickerStyle(.wheel)
+                .frame(width: 64, height: 120)
             }
-            .frame(width: 200, height: 180)
-            .background(Color(.systemBackground))
-            .cornerRadius(12)
-            .shadow(radius: 10)
-        }
-
-    private var durationPopup: some View {
-        VStack(spacing: 16) {
-            Text("Select Duration")
-                .font(.system(size: 16, weight: .semibold))
-                .padding(.top, 8)
-            
-            HStack(spacing: 16) {
-                // Hours picker
-                VStack {
-                    Text("Hours")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(.secondary)
-                    
-                    Picker("Hours", selection: $selDurH) {
-                        ForEach(0...12, id: \.self) { hour in
-                            Text("\(hour)h").tag(hour)
-                        }
-                        }
-                        .pickerStyle(WheelPickerStyle())
-                        .frame(width: 60, height: 100)
-                    }
-                    
-                    // Minutes picker
-                    VStack {
-                        Text("Minutes")
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundColor(.secondary)
-                        
-                        Picker("Minutes", selection: $selDurM) {
-                            ForEach(0..<60, id: \.self) { minute in
-                                Text("\(minute)m").tag(minute)
-                            }
-                        }
-                        .pickerStyle(WheelPickerStyle())
-                        .frame(width: 60, height: 100)
-                    }
+            VStack {
+                Text("Minute").font(.system(size: 12, weight: .medium)).foregroundColor(.secondary)
+                Picker("Minute", selection: $selectedMinute) {
+                    ForEach(0..<60, id: \.self) { Text(String(format: "%02d", $0)).tag($0) }
                 }
-                
-                Button("Done") {
-                    showDurPicker = false
-                }
-                .font(.system(size: 14, weight: .medium))
-                .padding(.bottom, 8)
+                .pickerStyle(.wheel)
+                .frame(width: 64, height: 120)
             }
-            .frame(width: 200, height: 180)
-            .background(Color(.systemBackground))
-            .cornerRadius(12)
-            .shadow(radius: 10)
+            VStack {
+                Text("AM/PM").font(.system(size: 12, weight: .medium)).foregroundColor(.secondary)
+                Picker("AM/PM", selection: $selectedAMPM) {
+                    Text("AM").tag("AM")
+                    Text("PM").tag("PM")
+                }
+                .pickerStyle(.wheel)
+                .frame(width: 72, height: 120)
+            }
         }
+    }
 
+    private var durationRoller: some View {
+        HStack(spacing: 16) {
+            VStack {
+                Text("Hours").font(.system(size: 12, weight: .medium)).foregroundColor(.secondary)
+                Picker("Hours", selection: $selDurH) {
+                    ForEach(0...12, id: \.self) { Text("\($0)h").tag($0) }
+                }
+                .pickerStyle(.wheel)
+                .frame(width: 72, height: 120)
+            }
+            VStack {
+                Text("Minutes").font(.system(size: 12, weight: .medium)).foregroundColor(.secondary)
+                Picker("Minutes", selection: $selDurM) {
+                    ForEach(0..<60, id: \.self) { Text("\($0)m").tag($0) }
+                }
+                .pickerStyle(.wheel)
+                .frame(width: 72, height: 120)
+            }
+        }
+    }
+
+    // MARK: - Data (unchanged from your version)
     private func load() {
         guard authManager.isAuthenticated else {
             print("❌ User not authenticated, skipping load")
             return
         }
-        
         let dStr = uiDateFormatter.string(from: selectedDate)
-        print("📥 Loading tasks for date: \(dStr)")
-        
         Task {
             do {
                 let q = try await Amplify.API.query(request: .list(DailyTask.self))
                 await MainActor.run {
                     switch q {
                     case .success(let api):
-                        print("✅ Loaded \(api.count) total tasks")
-                        // Filter tasks for the selected date
-                        let filteredTasks = api.filter { task in
-                            let taskDateString = task.date.iso8601String.prefix(10)
-                            return String(taskDateString) == dStr
-                        }
-                        print("✅ Found \(filteredTasks.count) tasks for date: \(dStr)")
-                        let sorted = filteredTasks.sorted { ($0.order ?? 0) < ($1.order ?? 0) }
+                        let filtered = api.filter { String($0.date.iso8601String.prefix(10)) == dStr }
+                        let sorted = filtered.sorted { ($0.order ?? 0) < ($1.order ?? 0) }
                         plans[todayKey] = sorted.map(DailyPlanTask.init(apiModel:))
-                        print("📋 Tasks in plans[\(todayKey)]: \(plans[todayKey]?.count ?? 0)")
-                        for task in plans[todayKey] ?? [] {
-                            print("   - \(task.text) (Time: \(task.time ?? "none"), Duration: \(task.duration ?? "none"))")
-                        }
                     case .failure(let e):
-                        print("❌ Load failed: \(e)")
                         show("Failed to load: \(e)")
                     }
                 }
             } catch {
-                print("❌ Load error: \(error)")
                 show("Failed to load: \(error.localizedDescription)")
             }
         }
     }
-    
-    private func refreshTasks() async {
-        print("🔄 Refreshing tasks...")
-        await MainActor.run {
-            load()
-        }
-    }
+
+    private func refreshTasks() async { await MainActor.run { load() } }
 
     private func save() {
         let trimmed = newTaskText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
-        
-        guard authManager.isAuthenticated else {
-            show("Please sign in to save tasks")
-            return
-        }
-
-        print("💾 Saving task: \(trimmed)")
-        print("📅 Date: \(todayKey)")
-        print("🔐 User authenticated: \(authManager.isAuthenticated)")
+        guard authManager.isAuthenticated else { show("Please sign in to save tasks"); return }
 
         let ui = DailyPlanTask(
             id: UUID().uuidString,
@@ -458,36 +482,20 @@ struct DailyPlanView: View {
             duration: durString.isEmpty ? nil : durString,
             order: todayTasks.count,
             done: false,
-            owner: nil // Amplify will automatically set this to the current user
+            owner: nil
         )
-        
-        print("📝 Task details:")
-        print("   - Text: \(trimmed)")
-        print("   - Time: \(timeString)")
-        print("   - Duration: \(durString)")
-        print("   - Date: \(todayKey)")
-
-        guard let api = ui.toAPITask() else { 
-            print("❌ Failed to create API task")
-            show("Date parse failed"); 
-            return 
-        }
+        guard let api = ui.toAPITask() else { show("Date parse failed"); return }
 
         Task {
             do {
-                print("🚀 Sending API request...")
                 let result = try await Amplify.API.mutate(request: .create(api))
                 await MainActor.run {
                     if case .success(let saved) = result {
-                        print("✅ Task saved successfully: \(saved.id)")
                         plans[todayKey, default: []].append(DailyPlanTask(apiModel: saved))
                         newTaskText = ""
                     }
                 }
-            } catch {
-                print("❌ Save failed: \(error)")
-                show("Save failed: \(error.localizedDescription)")
-            }
+            } catch { show("Save failed: \(error.localizedDescription)") }
         }
     }
 
@@ -507,11 +515,10 @@ struct DailyPlanView: View {
         }
     }
 
-    private func show(_ msg: String) {
-        error = msg
-        showErr = true
-    }
+    private func show(_ msg: String) { error = msg; showErr = true }
 }
+
+// MARK: - WeekDayView
 struct WeekDayView: View {
     let date: Date
     let isSelected: Bool
@@ -540,6 +547,8 @@ struct WeekDayView: View {
         .buttonStyle(.plain)
     }
 }
+
+// MARK: - Task Row
 struct DailyPlanTaskRow: View {
     let task: DailyPlanTask
     let onToggle: () -> Void
@@ -555,6 +564,10 @@ struct DailyPlanTaskRow: View {
     var txt: Color {
         themeManager.colorScheme == .dark ? Color(red: 0.94, green: 0.94, blue: 0.94) :
                           Color(red: 0.23, green: 0.23, blue: 0.23)
+    }
+
+    private var displayTime: String? {
+        TimeFormatterUtil.normalizeForDisplay(task.time)
     }
 
     var body: some View {
@@ -581,7 +594,7 @@ struct DailyPlanTaskRow: View {
                             .frame(maxWidth: .infinity, alignment: .leading)
 
                         HStack(spacing: 8) {
-                            if let t = task.time, !t.isEmpty { Tag(t) }
+                            if let t = displayTime, !t.isEmpty { Tag(t) }
                             if let d = task.duration, !d.isEmpty { Tag(d) }
                         }
                     }
@@ -630,3 +643,4 @@ struct DailyPlanTaskRow: View {
             .cornerRadius(16)
     }
 }
+

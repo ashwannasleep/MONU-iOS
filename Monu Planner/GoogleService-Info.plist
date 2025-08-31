@@ -9,7 +9,7 @@
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>
-	<string>con.ashleychang.Monu-Planner</string>
+	<string>com.ashleychang.Monu-Planner</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>

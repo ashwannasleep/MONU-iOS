@@ -1,5 +1,6 @@
 import Foundation
 import Combine
+import GoogleSignIn
 
 @MainActor
 final class CalendarSyncManager: ObservableObject {
@@ -44,13 +45,30 @@ final class CalendarSyncManager: ObservableObject {
     @Published private(set) var lastSyncDate: Date?
     @Published private(set) var errorMessage: String?
     
-    // Enhanced date range with configurable lookback/ahead
-    private var lookBack: Date {
-        Calendar.current.date(byAdding: .month, value: -1, to: Date()) ?? Date()
+    // MARK: - Calendar helpers (explicit local timezone everywhere)
+    private var localCal: Calendar {
+        var c = Calendar.current
+        c.timeZone = .current
+        return c
+    }
+    private func dayInterval(for date: Date) -> DateInterval {
+        localCal.dateInterval(of: .day, for: date)
+        ?? DateInterval(start: localCal.startOfDay(for: date),
+                        end: localCal.date(byAdding: .day, value: 1, to: localCal.startOfDay(for: date))!)
+    }
+    /// Overlap check: [eventStart, eventEnd) vs [rangeStart, rangeEnd)
+    private func overlaps(eventStart: Date, eventEnd: Date?, rangeStart: Date, rangeEnd: Date) -> Bool {
+        let eStart = eventStart
+        let eEnd   = eventEnd ?? eventStart
+        return (eStart < rangeEnd) && (eEnd > rangeStart)
     }
     
+    // Enhanced date range with configurable lookback/ahead
+    private var lookBack: Date {
+        localCal.date(byAdding: .month, value: -1, to: Date()) ?? Date()
+    }
     private var lookAhead: Date {
-        Calendar.current.date(byAdding: .month, value: 1, to: Date()) ?? Date()
+        localCal.date(byAdding: .month, value: 1, to: Date()) ?? Date()
     }
     
     // MARK: - Public API with Enhanced Error Handling
@@ -63,7 +81,6 @@ final class CalendarSyncManager: ObservableObject {
     func connectApple() async {
         clearError()
         isLoading = true
-        
         do {
             try await appleProvider.requestAuthorization()
             useApple = true
@@ -72,28 +89,24 @@ final class CalendarSyncManager: ObservableObject {
             handleError("Apple Calendar connection failed: \(error.localizedDescription)")
             useApple = false
         }
-        
         isLoading = false
     }
     
     func connectGoogle() async {
         clearError()
         isLoading = true
-        
         print("🔄 CalendarSyncManager: Connecting to Google Calendar...")
-        
         do {
             try await googleProvider.requestAuthorization()
             useGoogle = true
             print("✅ CalendarSyncManager: Google Calendar connected successfully")
             await reSync()
         } catch {
-            let errorMessage = "Google Calendar connection failed: \(error.localizedDescription)"
-            print("❌ CalendarSyncManager: \(errorMessage)")
-            handleError(errorMessage)
+            let msg = "Google Calendar connection failed: \(error.localizedDescription)"
+            print("❌ CalendarSyncManager: \(msg)")
+            handleError(msg)
             useGoogle = false
         }
-        
         isLoading = false
     }
     
@@ -101,9 +114,7 @@ final class CalendarSyncManager: ObservableObject {
         print("🔄 CalendarSyncManager: Force refreshing Google Calendar...")
         clearError()
         isLoading = true
-        
         do {
-            // Force refresh the cache
             _ = try await googleProvider.forceRefreshCache()
             useGoogle = true
             print("✅ CalendarSyncManager: Google Calendar cache refreshed successfully")
@@ -112,7 +123,6 @@ final class CalendarSyncManager: ObservableObject {
             print("❌ CalendarSyncManager: Google Calendar cache refresh failed: \(error)")
             useGoogle = false
         }
-        
         isLoading = false
     }
     
@@ -122,20 +132,18 @@ final class CalendarSyncManager: ObservableObject {
         isLoading = true
         
         do {
-            let calendar = Calendar.current
-            let startOfDay = calendar.startOfDay(for: date)
-            let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay) ?? date
-            
-            let freshEvents = try await googleProvider.fetchEventsForDateRange(from: startOfDay, to: endOfDay)
+            let day = dayInterval(for: date)
+            let freshEvents = try await googleProvider.fetchEventsForDateRange(from: day.start, to: day.end)
             print("✅ CalendarSyncManager: Fetched \(freshEvents.count) fresh events for \(date)")
             
-            // Update the events list with fresh data
             await MainActor.run {
-                // Remove old events for this date and add fresh ones
-                let filteredEvents = self.events.filter { event in
-                    !calendar.isDate(event.start, inSameDayAs: date)
+                // Remove ALL events overlapping this day (including spanning events),
+                // then append the fresh set for the day.
+                self.events.removeAll { ev in
+                    overlaps(eventStart: ev.start, eventEnd: ev.end, rangeStart: day.start, rangeEnd: day.end)
                 }
-                self.events = filteredEvents + freshEvents
+                self.events.append(contentsOf: freshEvents)
+                self.events.sort { $0.start < $1.start }
             }
         } catch {
             print("❌ CalendarSyncManager: Failed to refresh Google Calendar for date: \(error)")
@@ -151,13 +159,10 @@ final class CalendarSyncManager: ObservableObject {
         clearError()
         isLoading = true
         
-        // Check existing connections first
         let appleConnected = appleProvider.isConnected
         let googleConnected = googleProvider.isConnected
-        
         print("🔍 CalendarSyncManager: Apple connected: \(appleConnected), Google connected: \(googleConnected)")
         
-        // Only request authorization if not already connected
         if !appleConnected {
             do {
                 try await appleProvider.requestAuthorization()
@@ -172,13 +177,31 @@ final class CalendarSyncManager: ObservableObject {
             print("✅ Apple Calendar already connected")
         }
         
+        print("check google: \(googleConnected)")
+        if googleConnected {
+            print("check google")
+        }
+        
         if !googleConnected {
             do {
+                print("🔄 CalendarSyncManager: Attempting Google Calendar connection...")
                 try await googleProvider.requestAuthorization()
                 useGoogle = true
                 print("✅ Google Calendar connected successfully")
             } catch {
                 print("❌ Google Calendar connection failed: \(error.localizedDescription)")
+                
+                // Provide user-friendly error message based on error type
+                if error.localizedDescription.contains("Code=-4") {
+                    handleError("Google Calendar session expired. Please sign in again.")
+                } else if error.localizedDescription.contains("networkError") {
+                    handleError("Network error. Please check your internet connection.")
+                } else if error.localizedDescription.contains("permissionDenied") {
+                    handleError("Calendar permission denied. Please grant access in Settings.")
+                } else {
+                    handleError("Google Calendar connection failed: \(error.localizedDescription)")
+                }
+                
                 useGoogle = false
             }
         } else {
@@ -186,7 +209,6 @@ final class CalendarSyncManager: ObservableObject {
             print("✅ Google Calendar already connected")
         }
         
-        // Sync events if any provider is connected
         if useApple || useGoogle {
             await reSync()
         }
@@ -208,7 +230,6 @@ final class CalendarSyncManager: ObservableObject {
     
     func add(_ event: CalendarEvent) async throws {
         clearError()
-        
         do {
             switch event.provider {
             case .apple:
@@ -216,14 +237,12 @@ final class CalendarSyncManager: ObservableObject {
                     throw CalendarSyncError.providerNotConnected(.apple)
                 }
                 try await appleProvider.add(event)
-                
             case .google:
                 guard useGoogle && googleProvider.isConnected else {
                     throw CalendarSyncError.providerNotConnected(.google)
                 }
                 try await googleProvider.add(event)
             }
-            
             await reSync()
         } catch {
             handleError("Failed to add event: \(error.localizedDescription)")
@@ -233,7 +252,6 @@ final class CalendarSyncManager: ObservableObject {
     
     func update(_ event: CalendarEvent) async throws {
         clearError()
-        
         do {
             switch event.provider {
             case .apple:
@@ -241,14 +259,12 @@ final class CalendarSyncManager: ObservableObject {
                     throw CalendarSyncError.providerNotConnected(.apple)
                 }
                 try await appleProvider.update(event)
-                
             case .google:
                 guard useGoogle && googleProvider.isConnected else {
                     throw CalendarSyncError.providerNotConnected(.google)
                 }
                 try await googleProvider.update(event)
             }
-            
             await reSync()
         } catch {
             handleError("Failed to update event: \(error.localizedDescription)")
@@ -258,7 +274,6 @@ final class CalendarSyncManager: ObservableObject {
     
     func delete(_ event: CalendarEvent) async throws {
         clearError()
-        
         do {
             switch event.provider {
             case .apple:
@@ -266,14 +281,12 @@ final class CalendarSyncManager: ObservableObject {
                     throw CalendarSyncError.providerNotConnected(.apple)
                 }
                 try await appleProvider.delete(event)
-                
             case .google:
                 guard useGoogle && googleProvider.isConnected else {
                     throw CalendarSyncError.providerNotConnected(.google)
                 }
                 try await googleProvider.delete(event)
             }
-            
             await reSync()
         } catch {
             handleError("Failed to delete event: \(error.localizedDescription)")
@@ -308,6 +321,25 @@ final class CalendarSyncManager: ObservableObject {
         
         // Fetch from Google if connected
         if useGoogle && googleProvider.isConnected {
+            // Check if Google Sign-In has a previous session
+            let hasPreviousSignIn = GIDSignIn.sharedInstance.hasPreviousSignIn()
+            print("🔍 CalendarSyncManager: Google Sign-In previous session check:")
+            print("   - hasPreviousSignIn: \(hasPreviousSignIn)")
+            print("   - Current user: \(GIDSignIn.sharedInstance.currentUser?.profile?.email ?? "nil")")
+            
+            // Log access token and refresh token
+            if let currentUser = GIDSignIn.sharedInstance.currentUser {
+                print("🔐 CalendarSyncManager: Token information:")
+                print("   - Access Token: \(currentUser.accessToken.tokenString)")
+                print("   - Refresh Token: \(currentUser.refreshToken.tokenString)")
+                print("   - Access Token Expiry: \(currentUser.accessToken.expirationDate)")
+                
+                // Test storing tokens in keychain
+                await testTokenStorageInKeychain(currentUser: currentUser)
+            } else {
+                print("❌ CalendarSyncManager: No current user found for token logging")
+            }
+            
             do {
                 let googleEvents = try await googleProvider.fetchEvents(from: lookBack, to: lookAhead)
                 allEvents.append(contentsOf: googleEvents)
@@ -316,7 +348,7 @@ final class CalendarSyncManager: ObservableObject {
                 print("❌ CalendarSyncManager: Google Calendar fetch failed: \(error)")
                 handleError("Google Calendar fetch failed: \(error.localizedDescription)")
                 
-                // Try to force refresh Google connection if it fails
+                // Attempt to refresh Google connection if unauthorized/forbidden
                 if error.localizedDescription.contains("401") || error.localizedDescription.contains("403") {
                     print("🔄 CalendarSyncManager: Attempting to refresh Google connection...")
                     await forceRefreshGoogle()
@@ -326,7 +358,7 @@ final class CalendarSyncManager: ObservableObject {
         
         // Process and update events
         let processedEvents = allEvents
-            .mergedDeduping()
+            .mergedDeduping() // Assumes your existing extension uses stable IDs (provider+eventId)
             .sorted(by: { $0.start < $1.start })
         
         events = processedEvents
@@ -348,57 +380,41 @@ final class CalendarSyncManager: ObservableObject {
     
     func refreshAllProviders() async {
         clearError()
-        
-        // Refresh connections for active providers
         if useApple {
             await connectApple()
         }
-        
         if useGoogle {
             await connectGoogle()
         }
     }
     
+    /// Events overlapping a single day (overlap-aware).
     func getEventsForDate(_ date: Date) -> [CalendarEvent] {
-        let calendar = Calendar.current
-        
-        // Normalize the target date to start of day for comparison
-        let startOfDay = calendar.startOfDay(for: date)
-        let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay) ?? startOfDay
+        let interval = dayInterval(for: date)
+        let start = interval.start
+        let end   = interval.end
         
         print("📅 CalendarSyncManager: Looking for events on \(date)")
-        print("   - Start of day: \(startOfDay)")
-        print("   - End of day: \(endOfDay)")
+        print("   - Start of day: \(start)")
+        print("   - End of day: \(end)")
         print("   - Total events available: \(events.count)")
         
-        let filteredEvents = events.filter { event in
-            // Check if event starts on this day
-            let eventStartOfDay = calendar.startOfDay(for: event.start)
-            let eventEndOfDay = calendar.startOfDay(for: event.end)
-            
-            // Event is on this day if:
-            // 1. Event starts on this day, OR
-            // 2. Event ends on this day, OR  
-            // 3. Event spans across this day
-            let isOnThisDay = (eventStartOfDay >= startOfDay && eventStartOfDay < endOfDay) ||
-                              (eventEndOfDay > startOfDay && eventEndOfDay <= endOfDay) ||
-                              (eventStartOfDay < startOfDay && eventEndOfDay > endOfDay)
-            
-            if isOnThisDay {
-                print("   ✅ Event '\(event.title)' matches: start=\(event.start), end=\(event.end)")
+        let filtered = events.filter { ev in
+            let ok = overlaps(eventStart: ev.start, eventEnd: ev.end, rangeStart: start, rangeEnd: end)
+            if ok {
+                print("   ✅ Match '\(ev.title)' start=\(ev.start) end=\(String(describing: ev.end))")
             }
-            
-            return isOnThisDay
+            return ok
         }
-        
-        print("📅 CalendarSyncManager: Found \(filteredEvents.count) events for \(date)")
-        return filteredEvents
+        print("📅 CalendarSyncManager: Found \(filtered.count) events for \(date)")
+        return filtered.sorted { $0.start < $1.start }
     }
     
+    /// Events overlapping the requested range (not just starting within it).
     func getEventsForDateRange(from start: Date, to end: Date) -> [CalendarEvent] {
-        return events.filter { event in
-            event.start >= start && event.start <= end
-        }
+        return events
+            .filter { ev in overlaps(eventStart: ev.start, eventEnd: ev.end, rangeStart: start, rangeEnd: end) }
+            .sorted { $0.start < $1.start }
     }
     
     // MARK: - Error Handling
@@ -410,6 +426,150 @@ final class CalendarSyncManager: ObservableObject {
     
     private func clearError() {
         errorMessage = nil
+    }
+    
+    // MARK: - Keychain Token Storage Test
+    private func testTokenStorageInKeychain(currentUser: GIDGoogleUser) async {
+        print("🔐 CalendarSyncManager: Testing token storage in keychain...")
+        
+        guard let email = currentUser.profile?.email else {
+            print("❌ CalendarSyncManager: No email available for keychain test")
+            return
+        }
+        
+        // Test 1: Store Access Token
+        let accessTokenData = currentUser.accessToken.tokenString.data(using: .utf8)!
+        let accessTokenQuery: [CFString: Any] = [
+            kSecClass: kSecClassGenericPassword,
+            kSecAttrService: "com.ashleychang.Monu-Planner.accessToken",
+            kSecAttrAccount: email,
+            kSecValueData: accessTokenData,
+            kSecAttrAccessible: kSecAttrAccessibleWhenUnlockedThisDeviceOnly
+        ]
+        
+        let accessTokenStatus = SecItemAdd(accessTokenQuery as CFDictionary, nil)
+        print("   - Access Token storage status: \(accessTokenStatus)")
+        
+        if accessTokenStatus == errSecSuccess {
+            print("✅ Access Token stored successfully")
+        } else if accessTokenStatus == errSecDuplicateItem {
+            print("⚠️ Access Token already exists, updating...")
+            let updateQuery: [CFString: Any] = [
+                kSecClass: kSecClassGenericPassword,
+                kSecAttrService: "com.ashleychang.Monu-Planner.accessToken",
+                kSecAttrAccount: email
+            ]
+            let updateAttributes: [CFString: Any] = [
+                kSecValueData: accessTokenData
+            ]
+            let updateStatus = SecItemUpdate(updateQuery as CFDictionary, updateAttributes as CFDictionary)
+            print("   - Access Token update status: \(updateStatus)")
+        } else {
+            print("❌ Access Token storage failed: \(accessTokenStatus)")
+        }
+        
+        // Test 2: Store Refresh Token
+        let refreshTokenData = currentUser.refreshToken.tokenString.data(using: .utf8)!
+        let refreshTokenQuery: [CFString: Any] = [
+            kSecClass: kSecClassGenericPassword,
+            kSecAttrService: "com.ashleychang.Monu-Planner.refreshToken",
+            kSecAttrAccount: email,
+            kSecValueData: refreshTokenData,
+            kSecAttrAccessible: kSecAttrAccessibleWhenUnlockedThisDeviceOnly
+        ]
+        
+        let refreshTokenStatus = SecItemAdd(refreshTokenQuery as CFDictionary, nil)
+        print("   - Refresh Token storage status: \(refreshTokenStatus)")
+        
+        if refreshTokenStatus == errSecSuccess {
+            print("✅ Refresh Token stored successfully")
+        } else if refreshTokenStatus == errSecDuplicateItem {
+            print("⚠️ Refresh Token already exists, updating...")
+            let updateQuery: [CFString: Any] = [
+                kSecClass: kSecClassGenericPassword,
+                kSecAttrService: "com.ashleychang.Monu-Planner.refreshToken",
+                kSecAttrAccount: email
+            ]
+            let updateAttributes: [CFString: Any] = [
+                kSecValueData: refreshTokenData
+            ]
+            let updateStatus = SecItemUpdate(updateQuery as CFDictionary, updateAttributes as CFDictionary)
+            print("   - Refresh Token update status: \(updateStatus)")
+        } else {
+            print("❌ Refresh Token storage failed: \(refreshTokenStatus)")
+        }
+        
+        // Test 3: Retrieve tokens from keychain
+        await testTokenRetrievalFromKeychain(email: email)
+    }
+    
+    private func testTokenRetrievalFromKeychain(email: String) async {
+        print("🔐 CalendarSyncManager: Testing token retrieval from keychain...")
+        
+        // Retrieve Access Token
+        let accessTokenQuery: [CFString: Any] = [
+            kSecClass: kSecClassGenericPassword,
+            kSecAttrService: "com.ashleychang.Monu-Planner.accessToken",
+            kSecAttrAccount: email,
+            kSecReturnData: true
+        ]
+        
+        var accessTokenResult: AnyObject?
+        let accessTokenRetrieveStatus = SecItemCopyMatching(accessTokenQuery as CFDictionary, &accessTokenResult)
+        print("   - Access Token retrieval status: \(accessTokenRetrieveStatus)")
+        
+        if accessTokenRetrieveStatus == errSecSuccess,
+           let accessTokenData = accessTokenResult as? Data,
+           let accessTokenString = String(data: accessTokenData, encoding: .utf8) {
+            print("✅ Access Token retrieved successfully")
+            print("   - Retrieved Access Token: \(accessTokenString)")
+        } else {
+            print("❌ Access Token retrieval failed")
+        }
+        
+        // Retrieve Refresh Token
+        let refreshTokenQuery: [CFString: Any] = [
+            kSecClass: kSecClassGenericPassword,
+            kSecAttrService: "com.ashleychang.Monu-Planner.refreshToken",
+            kSecAttrAccount: email,
+            kSecReturnData: true
+        ]
+        
+        var refreshTokenResult: AnyObject?
+        let refreshTokenRetrieveStatus = SecItemCopyMatching(refreshTokenQuery as CFDictionary, &refreshTokenResult)
+        print("   - Refresh Token retrieval status: \(refreshTokenRetrieveStatus)")
+        
+        if refreshTokenRetrieveStatus == errSecSuccess,
+           let refreshTokenData = refreshTokenResult as? Data,
+           let refreshTokenString = String(data: refreshTokenData, encoding: .utf8) {
+            print("✅ Refresh Token retrieved successfully")
+            print("   - Retrieved Refresh Token: \(refreshTokenString)")
+        } else {
+            print("❌ Refresh Token retrieval failed")
+        }
+    }
+    
+    private func cleanupTestTokens(email: String) async {
+        print("🔐 CalendarSyncManager: Cleaning up test tokens...")
+        
+        let accessTokenDeleteQuery: [CFString: Any] = [
+            kSecClass: kSecClassGenericPassword,
+            kSecAttrService: "com.ashleychang.Monu-Planner.accessToken",
+            kSecAttrAccount: email
+        ]
+        
+        let refreshTokenDeleteQuery: [CFString: Any] = [
+            kSecClass: kSecClassGenericPassword,
+            kSecAttrService: "com.ashleychang.Monu-Planner.refreshToken",
+            kSecAttrAccount: email
+        ]
+        
+        let accessTokenDeleteStatus = SecItemDelete(accessTokenDeleteQuery as CFDictionary)
+        let refreshTokenDeleteStatus = SecItemDelete(refreshTokenDeleteQuery as CFDictionary)
+        
+        print("   - Access Token cleanup status: \(accessTokenDeleteStatus)")
+        print("   - Refresh Token cleanup status: \(refreshTokenDeleteStatus)")
+        print("✅ Keychain token storage test completed")
     }
     
     // MARK: - Connection Status Helpers

@@ -4,700 +4,434 @@ import UIKit
 
 @MainActor
 final class GoogleCalendarProvider: NSObject, @preconcurrency CalendarProvider, ObservableObject {
+
+    // MARK: - Constants
     private let baseURL = "https://www.googleapis.com/calendar/v3"
+    // Use least-privilege unless you truly need full calendar control:
+    // "https://www.googleapis.com/auth/calendar.events"
     private let calendarScope = "https://www.googleapis.com/auth/calendar"
-    
-    var source: Source { .google }
+
+    // MARK: - Protocol conformance
+    let source: Source = .google
     @Published private(set) var isConnected: Bool = false
+
+    // MARK: - State
     private var accessToken: String?
-    
-    // Local storage keys
-    private let cachedEventsKey = "google_calendar_cached_events"
-    private let lastSyncDateKey = "google_calendar_last_sync"
-    private let cacheExpirationHours: TimeInterval = 24 * 60 * 60 // 24 hours
-    
-    // User isolation
     private var currentAppUserEmail: String?
 
+    // Initial restore gate
+    private var didFinishInitialRestore = false
+    private var initContinuation: CheckedContinuation<Void, Never>?
+
+    // MARK: - Init
     override init() {
         super.init()
-        Task {
-            await restorePreviousSignIn()
-            await checkExistingSignIn()
+        Task { @MainActor in
+            configureIfNeeded()              // 1) configure GID
+            await restorePreviousSignIn()    // 2) silently restore
+            await reflectCurrentUserState()  // 3) update flags from currentUser
+            didFinishInitialRestore = true
+            initContinuation?.resume()
+            initContinuation = nil
         }
     }
-    
-    // MARK: - User Isolation Methods
-    
+
+    // Call this from the manager before checking isConnected during app start
+    func waitForInitialRestore() async {
+        if didFinishInitialRestore { return }
+        await withCheckedContinuation { (cont: CheckedContinuation<Void, Never>) in
+            self.initContinuation = cont
+        }
+    }
+
+    // MARK: - Public API
     func setCurrentAppUser(_ email: String?) async {
         currentAppUserEmail = email
-        print("🔐 Google Calendar: Set current app user to: \(email ?? "nil")")
-        
-        // If the current Google user doesn't match the app user, disconnect
-        if let googleUser = GIDSignIn.sharedInstance.currentUser,
-           let googleEmail = googleUser.profile?.email,
-           let appEmail = currentAppUserEmail,
+        if let appEmail = email,
+           let googleEmail = GIDSignIn.sharedInstance.currentUser?.profile?.email,
            googleEmail != appEmail {
-            print("⚠️ Google Calendar: User mismatch detected!")
-            print("   App user: \(appEmail)")
-            print("   Google user: \(googleEmail)")
-            await disconnect()
-        }
-    }
-
-    private func restorePreviousSignIn() async {
-        await withCheckedContinuation { continuation in
-            GIDSignIn.sharedInstance.restorePreviousSignIn { user, error in
-                if let error = error {
-                    print("ℹ️ Google Calendar: No previous sign-in to restore (\(error.localizedDescription))")
-                } else if let user = user {
-                    print("✅ Google Calendar: Restored previous Google sign-in for \(user.profile?.name ?? "unknown")")
-                    
-                    // Check if this Google user matches the current app user
-                    if let googleEmail = user.profile?.email,
-                       let appEmail = self.currentAppUserEmail,
-                       googleEmail != appEmail {
-                        print("⚠️ Google Calendar: Restored user doesn't match app user!")
-                        print("   App user: \(appEmail)")
-                        print("   Google user: \(googleEmail)")
-                        // Don't set access token - user mismatch
-                    } else {
-                        self.accessToken = user.accessToken.tokenString
-                    }
-                } else {
-                    print("ℹ️ Google Calendar: No previous Google user found")
-                }
-                continuation.resume()
-            }
-        }
-    }
-
-    private func checkExistingSignIn() async {
-        print("🔍 Google Calendar: Checking existing sign-in...")
-        
-        guard let user = GIDSignIn.sharedInstance.currentUser else {
-            print("❌ Google Calendar: No current user found")
-            await MainActor.run {
-                isConnected = false
-            }
-            return
-        }
-
-        // Check user isolation
-        if let googleEmail = user.profile?.email,
-           let appEmail = currentAppUserEmail,
-           googleEmail != appEmail {
-            print("⚠️ Google Calendar: User mismatch! Disconnecting...")
-            print("   App user: \(appEmail)")
-            print("   Google user: \(googleEmail)")
-            await disconnect()
-            return
-        }
-
-        let hasCalendarScope = user.grantedScopes?.contains(calendarScope) ?? false
-        print("🔍 Google Calendar: User found, calendar scope: \(hasCalendarScope)")
-
-        await MainActor.run {
-            isConnected = hasCalendarScope
-        }
-
-        if isConnected {
-            accessToken = user.accessToken.tokenString
-            print("✅ Google Calendar: Successfully restored connection")
-        } else {
-            print("❌ Google Calendar: User exists but no calendar scope")
+            self.isConnected = false
+            self.accessToken = nil
         }
     }
 
     func requestAuthorization() async throws {
-        print("🔐 Google Calendar: Starting authorization...")
+        configureIfNeeded()
         
-        // Check if already connected
-        if isConnected {
-            print("✅ Google Calendar: Already connected, skipping authorization")
-            return
+        if GIDSignIn.sharedInstance.currentUser == nil {
+            await restorePreviousSignIn()
         }
         
-        // Check if user is already signed in but needs calendar scope
+        print(GIDSignIn.sharedInstance.currentUser)
+
+        // Reuse existing session if scoped and not mismatched
         if let user = GIDSignIn.sharedInstance.currentUser {
-            // Check user isolation first
-            if let googleEmail = user.profile?.email,
-               let appEmail = currentAppUserEmail,
+            if let appEmail = currentAppUserEmail,
+               let googleEmail = user.profile?.email,
                googleEmail != appEmail {
-                print("⚠️ Google Calendar: User mismatch! Signing out current Google user...")
                 GIDSignIn.sharedInstance.signOut()
-            } else {
-                let hasCalendarScope = user.grantedScopes?.contains(calendarScope) ?? false
-                if hasCalendarScope {
-                    print("✅ Google Calendar: User already has calendar access")
-                    accessToken = user.accessToken.tokenString
-                    await MainActor.run {
-                        isConnected = true
-                    }
-                    return
-                } else {
-                    print("🔐 Google Calendar: User signed in but needs calendar scope")
-                }
-            }
-        }
-        
-        guard let presentingViewController = await getRootViewController() else {
-            throw CalendarError.authorizationFailed("Could not find presenting view controller")
-        }
-
-        guard let clientID = getGoogleClientID() else {
-            throw CalendarError.authorizationFailed("Google Client ID not found")
-        }
-
-        print("🔐 Google Calendar: Client ID found, configuring...")
-
-        await MainActor.run {
-            GIDSignIn.sharedInstance.configuration = GIDConfiguration(clientID: clientID)
-        }
-
-        do {
-            print("🔐 Google Calendar: Requesting sign-in with calendar scope...")
-            
-            let result = try await GIDSignIn.sharedInstance.signIn(
-                withPresenting: presentingViewController,
-                hint: nil,
-                additionalScopes: [calendarScope]
-            )
-
-            let user = result.user
-            print("🔐 Google Calendar: Sign-in successful, checking scopes...")
-
-            guard user.grantedScopes?.contains(calendarScope) == true else {
-                print("❌ Google Calendar: Calendar access not granted")
-                throw CalendarError.authorizationFailed("Calendar access not granted")
-            }
-
-            // Verify user isolation
-            if let googleEmail = user.profile?.email,
-               let appEmail = currentAppUserEmail,
-               googleEmail != appEmail {
-                print("⚠️ Google Calendar: User mismatch after sign-in!")
-                print("   App user: \(appEmail)")
-                print("   Google user: \(googleEmail)")
-                GIDSignIn.sharedInstance.signOut()
-                throw CalendarError.authorizationFailed("Google account doesn't match app user")
-            }
-
-            accessToken = user.accessToken.tokenString
-            print("🔐 Google Calendar: Access token obtained")
-
-            await MainActor.run {
+            } else if user.grantedScopes?.contains(calendarScope) == true {
+                try await user.refreshTokensIfNeeded()
+                accessToken = user.accessToken.tokenString
                 isConnected = true
+                return
             }
-
-            print("✅ Google Calendar: Successfully connected with calendar access")
-
-        } catch let error as GIDSignInError {
-            print("❌ Google Calendar: Sign-in error: \(error.localizedDescription)")
-            throw CalendarError.authorizationFailed("Google Sign-In failed: \(error.localizedDescription)")
-        } catch {
-            print("❌ Google Calendar: Unexpected error: \(error.localizedDescription)")
-            throw CalendarError.authorizationFailed(error.localizedDescription)
         }
+
+        guard let presenting = await getRootViewController() else {
+            throw CalendarError.networkError("Authorization failed: no presenting view controller")
+        }
+
+        let result = try await GIDSignIn.sharedInstance.signIn(
+            withPresenting: presenting,
+            hint: nil,
+            additionalScopes: [calendarScope]
+        )
+        let user = result.user
+
+        guard user.grantedScopes?.contains(calendarScope) == true else {
+            throw CalendarError.networkError("Authorization failed: calendar scope not granted")
+        }
+
+        if let appEmail = currentAppUserEmail,
+           let googleEmail = user.profile?.email,
+           googleEmail != appEmail {
+            GIDSignIn.sharedInstance.signOut()
+            throw CalendarError.networkError("Authorization failed: Google account doesn't match app user")
+        }
+
+        accessToken = user.accessToken.tokenString
+        isConnected = true
     }
 
     func disconnect() async {
-        print("🔌 Google Calendar: Disconnecting...")
-        
-        await MainActor.run {
-            GIDSignIn.sharedInstance.signOut()
-        }
-
+        GIDSignIn.sharedInstance.signOut()
         accessToken = nil
-        clearLocalCache() // Clear cached data when disconnecting
-
-        await MainActor.run {
-            isConnected = false
-        }
-        
-        print("✅ Google Calendar: Disconnected successfully")
-    }
-    
-    func forceRefreshCache() async throws -> [CalendarEvent] {
-        print("🔄 Google Calendar: Force refreshing cache...")
-        clearLocalCache()
-        return try await fetchEvents(from: Date().addingTimeInterval(-30*24*60*60), to: Date().addingTimeInterval(30*24*60*60))
-    }
-    
-    func fetchEventsForDateRange(from start: Date, to end: Date) async throws -> [CalendarEvent] {
-        print("📅 Google Calendar: Fetching events for specific date range: \(start) to \(end)")
-        clearLocalCache() // Clear cache to ensure fresh data
-        
-        // Use a more precise date range for specific queries
-        let calendar = Calendar.current
-        let startOfDay = calendar.startOfDay(for: start)
-        let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay) ?? start
-        
-        return try await fetchEvents(from: startOfDay, to: endOfDay)
-    }
-    
-    // MARK: - Local Storage Methods
-    
-    private func saveEventsToLocalStorage(_ events: [CalendarEvent]) {
-        do {
-            let encoder = JSONEncoder()
-            let data = try encoder.encode(events)
-            UserDefaults.standard.set(data, forKey: cachedEventsKey)
-            UserDefaults.standard.set(Date(), forKey: lastSyncDateKey)
-            print("💾 Google Calendar: Saved \(events.count) events to local storage")
-        } catch {
-            print("❌ Google Calendar: Failed to save events to local storage: \(error)")
-        }
-    }
-    
-    private func loadEventsFromLocalStorage() -> [CalendarEvent] {
-        guard let data = UserDefaults.standard.data(forKey: cachedEventsKey) else {
-            print("📱 Google Calendar: No cached events found")
-            return []
-        }
-        
-        do {
-            let decoder = JSONDecoder()
-            let events = try decoder.decode([CalendarEvent].self, from: data)
-            print("📱 Google Calendar: Loaded \(events.count) events from local storage")
-            return events
-        } catch {
-            print("❌ Google Calendar: Failed to load events from local storage: \(error)")
-            return []
-        }
-    }
-    
-    private func isCacheValid() -> Bool {
-        guard let lastSync = UserDefaults.standard.object(forKey: lastSyncDateKey) as? Date else {
-            return false
-        }
-        
-        let timeSinceLastSync = Date().timeIntervalSince(lastSync)
-        let isValid = timeSinceLastSync < cacheExpirationHours
-        
-        print("⏰ Google Calendar: Cache valid: \(isValid), last sync: \(timeSinceLastSync / 3600) hours ago")
-        return isValid
-    }
-    
-    private func clearLocalCache() {
-        UserDefaults.standard.removeObject(forKey: cachedEventsKey)
-        UserDefaults.standard.removeObject(forKey: lastSyncDateKey)
-        print("🗑️ Google Calendar: Cleared local cache")
+        isConnected = false
     }
 
-    private func getGoogleClientID() -> String? {
-        guard let path = Bundle.main.path(forResource: "GoogleService-Info", ofType: "plist"),
-              let plist = NSDictionary(contentsOfFile: path),
-              let clientId = plist["CLIENT_ID"] as? String else {
-            print("❌ Google Calendar: Could not find GoogleService-Info.plist or CLIENT_ID")
-            return nil
+    @discardableResult
+    func forceRefreshCache() async throws -> Bool {
+        if let user = GIDSignIn.sharedInstance.currentUser {
+            try await user.refreshTokensIfNeeded()
+            accessToken = user.accessToken.tokenString
+            isConnected = user.grantedScopes?.contains(calendarScope) ?? false
+            return true
         }
-        print("✅ Google Calendar: Client ID found")
-        return clientId
+        // Try restore; if not, fall back to auth
+        await restorePreviousSignIn()
+        if isConnected { return true }
+        try await requestAuthorization()
+        return isConnected
     }
 
-    private func getRootViewController() async -> UIViewController? {
-        await MainActor.run {
-            guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-                  let window = windowScene.windows.first else {
-                print("❌ Google Calendar: Could not find root view controller")
-                return nil
-            }
-            return window.rootViewController
-        }
-    }
-
-    private func refreshTokenIfNeeded() async throws {
-        guard let user = GIDSignIn.sharedInstance.currentUser else {
-            print("❌ Google Calendar: No current user for token refresh")
-            throw CalendarError.notConnected
-        }
-
-        if let expirationDate = user.accessToken.expirationDate {
-            let timeUntilExpiration = expirationDate.timeIntervalSinceNow
-            print("🔍 Google Calendar: Token expires in \(timeUntilExpiration) seconds")
-            
-            if timeUntilExpiration < 300 { // Refresh if expires in less than 5 minutes
-                print("🔄 Google Calendar: Refreshing token...")
-                try await user.refreshTokensIfNeeded()
-                accessToken = user.accessToken.tokenString
-                print("✅ Google Calendar: Token refreshed successfully")
-            } else {
-                print("✅ Google Calendar: Token is still valid")
-            }
-        } else {
-            print("⚠️ Google Calendar: No expiration date for token")
-        }
-    }
-
+    // MARK: - Fetch / CRUD
     func fetchEvents(from start: Date, to end: Date) async throws -> [CalendarEvent] {
-        print("📅 Google Calendar: Fetching events from \(start) to \(end)")
-        
-        // Always fetch fresh data for specific date ranges to ensure accuracy
-        // Only use cache for general browsing, not for specific date queries
-        
-        guard isConnected else {
-            print("❌ Google Calendar: Not connected")
-            throw CalendarError.notConnected
-        }
-
+        guard isConnected else { throw CalendarError.notConnected }
         try await refreshTokenIfNeeded()
 
-        guard let accessToken = accessToken else {
-            print("❌ Google Calendar: No access token")
-            throw CalendarError.notConnected
-        }
+        let url = try buildEventsURL(timeMin: toRFC3339Local(start), timeMax: toRFC3339Local(end))
+        let data = try await authedJSON(method: "GET", url: url, body: nil)
 
-        let formatter = ISO8601DateFormatter()
-        let startISO = formatter.string(from: start)
-        let endISO = formatter.string(from: end)
+        struct GEventsResponse: Decodable { let items: [GEvent] }
+        let decoded = try JSONDecoder().decode(GEventsResponse.self, from: data)
 
-        guard let encodedStart = startISO.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
-              let encodedEnd = endISO.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) else {
-            print("❌ Google Calendar: Failed to encode dates")
-            throw CalendarError.invalidRequest
-        }
+        return decoded.items
+            .compactMap { self.mapToCalendarEvent($0) }
+            .sorted { $0.start < $1.start }
+    }
 
-        let urlString = "\(baseURL)/calendars/primary/events?timeMin=\(encodedStart)&timeMax=\(encodedEnd)&singleEvents=true&orderBy=startTime&maxResults=2500&showDeleted=false"
-
-        guard let url = URL(string: urlString) else {
-            print("❌ Google Calendar: Invalid URL")
-            throw CalendarError.invalidRequest
-        }
-
-        print("🌐 Google Calendar: Making request to \(urlString)")
-
-        var request = URLRequest(url: url)
-        request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.timeoutInterval = 30.0
-
-        do {
-            let (data, response) = try await URLSession.shared.data(for: request)
-
-            guard let httpResponse = response as? HTTPURLResponse else {
-                print("❌ Google Calendar: Invalid response type")
-                throw CalendarError.networkError("Invalid response")
-            }
-
-            print("📡 Google Calendar: Response status: \(httpResponse.statusCode)")
-
-            guard httpResponse.statusCode < 300 else {
-                let errorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
-                print("❌ Google Calendar: HTTP \(httpResponse.statusCode): \(errorMessage)")
-                throw CalendarError.networkError("HTTP \(httpResponse.statusCode): \(errorMessage)")
-            }
-
-            let events = try parseEvents(from: data)
-            print("✅ Google Calendar: Successfully fetched \(events.count) events")
-            
-            // Save events to local storage for future use
-            saveEventsToLocalStorage(events)
-            
-            return events
-            
-        } catch {
-            print("❌ Google Calendar: Network error: \(error.localizedDescription)")
-            throw CalendarError.networkError("Network error: \(error.localizedDescription)")
-        }
+    func fetchEventsForDateRange(from start: Date, to end: Date) async throws -> [CalendarEvent] {
+        try await fetchEvents(from: start, to: end)
     }
 
     func add(_ event: CalendarEvent) async throws {
-        guard isConnected else {
-            throw CalendarError.notConnected
-        }
-
+        guard isConnected else { throw CalendarError.notConnected }
         try await refreshTokenIfNeeded()
 
-        guard let accessToken = accessToken else {
-            throw CalendarError.notConnected
+        let url = try buildInsertURL()
+        let body = try makeEventBody(from: event)
+        let data = try await authedJSON(method: "POST", url: url, body: body)
+
+        // Capture created Google event id for future updates/deletes
+        struct GEventCreated: Decodable { let id: String }
+        if let created = try? JSONDecoder().decode(GEventCreated.self, from: data) {
+            // TODO: persist mapping from your local model -> created.id
+            print("Created Google event id: \(created.id)")
         }
-
-        guard let url = URL(string: "\(baseURL)/calendars/primary/events") else {
-            throw CalendarError.invalidRequest
-        }
-
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.timeoutInterval = 30.0
-
-        let eventData = try createEventJSON(from: event)
-        request.httpBody = eventData
-
-        let (data, response) = try await URLSession.shared.data(for: request)
-
-        guard let httpResponse = response as? HTTPURLResponse,
-              httpResponse.statusCode < 300 else {
-            let errorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
-            throw CalendarError.networkError("Failed to create event: \(errorMessage)")
-        }
-
-        print("Google Calendar: Successfully added event '\(event.title)'")
     }
 
     func update(_ event: CalendarEvent) async throws {
-        guard isConnected else {
-            throw CalendarError.notConnected
-        }
-
+        guard isConnected else { throw CalendarError.notConnected }
         try await refreshTokenIfNeeded()
 
-        guard let accessToken = accessToken else {
-            throw CalendarError.notConnected
-        }
-
-        let eventId = event.id
-
-        guard let url = URL(string: "\(baseURL)/calendars/primary/events/\(eventId)") else {
-            throw CalendarError.invalidRequest
-        }
-
-        var request = URLRequest(url: url)
-        request.httpMethod = "PUT"
-        request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.timeoutInterval = 30.0
-
-        let eventData = try createEventJSON(from: event)
-        request.httpBody = eventData
-
-        let (data, response) = try await URLSession.shared.data(for: request)
-
-        guard let httpResponse = response as? HTTPURLResponse,
-              httpResponse.statusCode < 300 else {
-            let errorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
-            throw CalendarError.networkError("Failed to update event: \(errorMessage)")
-        }
-
-        print("Google Calendar: Successfully updated event '\(event.title)'")
+        let url = try buildEventURL(eventId: event.id) // event.id should be the Google id
+        let body = try makeEventBody(from: event)
+        _ = try await authedJSON(method: "PATCH", url: url, body: body)
     }
 
     func delete(_ event: CalendarEvent) async throws {
-        guard isConnected else {
-            throw CalendarError.notConnected
-        }
-
+        guard isConnected else { throw CalendarError.notConnected }
         try await refreshTokenIfNeeded()
 
-        guard let accessToken = accessToken else {
+        let url = try buildEventURL(eventId: event.id)
+        _ = try await authedJSON(method: "DELETE", url: url, body: nil)
+    }
+
+    // MARK: - Session restore/check
+    private func restorePreviousSignIn() async {
+        await withCheckedContinuation { (cont: CheckedContinuation<Void, Never>) in
+            // (Optional) Helpful log before restore:
+            let hadPrev = GIDSignIn.sharedInstance.hasPreviousSignIn()
+            print("🔎 hasPreviousSignIn BEFORE restore: \(hadPrev)")
+
+            GIDSignIn.sharedInstance.restorePreviousSignIn { user, error in
+                defer { cont.resume() }
+
+                if let err = error as NSError? {
+                    print("❌ restorePreviousSignIn error: \(err.domain) code=\(err.code) \(err.localizedDescription)")
+                    self.accessToken = nil
+                    self.isConnected = false
+                    return
+                }
+
+                guard let user = user else {
+                    print("ℹ️ No stored session to restore")
+                    self.accessToken = nil
+                    self.isConnected = false
+                    return
+                }
+
+                // Optional app-user/email isolation
+                if let appEmail = self.currentAppUserEmail,
+                   let googleEmail = user.profile?.email,
+                   googleEmail != appEmail {
+                    print("⚠️ Email mismatch on restore (app=\(appEmail), google=\(googleEmail))")
+                    self.accessToken = nil
+                    self.isConnected = false
+                    return
+                }
+
+                self.accessToken = user.accessToken.tokenString
+                self.isConnected = user.grantedScopes?.contains(self.calendarScope) ?? false
+                print("✅ Restored user: \(user.profile?.email ?? "unknown"), has calendar scope: \(self.isConnected)")
+            }
+        }
+    }
+
+    private func reflectCurrentUserState() async {
+        guard let user = GIDSignIn.sharedInstance.currentUser else {
+            isConnected = false
+            return
+        }
+        if let appEmail = currentAppUserEmail,
+           let googleEmail = user.profile?.email,
+           googleEmail != appEmail {
+            await disconnect()
+            return
+        }
+        accessToken = user.accessToken.tokenString
+        isConnected = user.grantedScopes?.contains(calendarScope) ?? false
+    }
+
+    // MARK: - Token
+    private func refreshTokenIfNeeded() async throws {
+        guard let user = GIDSignIn.sharedInstance.currentUser else {
             throw CalendarError.notConnected
         }
-
-        let eventId = event.id
-
-        guard let url = URL(string: "\(baseURL)/calendars/primary/events/\(eventId)") else {
-            throw CalendarError.invalidRequest
-        }
-
-        var request = URLRequest(url: url)
-        request.httpMethod = "DELETE"
-        request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
-        request.timeoutInterval = 30.0
-
-        let (data, response) = try await URLSession.shared.data(for: request)
-
-        guard let httpResponse = response as? HTTPURLResponse,
-              httpResponse.statusCode < 300 else {
-            let errorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
-            throw CalendarError.networkError("Failed to delete event: \(errorMessage)")
-        }
-
-        print("Google Calendar: Successfully deleted event '\(event.title)'")
+        try await user.refreshTokensIfNeeded()
+        accessToken = user.accessToken.tokenString
     }
 
-    private func parseEvents(from data: Data) throws -> [CalendarEvent] {
-        struct GoogleCalendarResponse: Codable {
-            let items: [GoogleCalendarEvent]?
+    // MARK: - Configuration / helpers
+    private func configureIfNeeded() {
+        print("check in configuration")
+        print(GIDSignIn.sharedInstance.configuration)
+        if GIDSignIn.sharedInstance.configuration == nil,
+           let clientID = getGoogleClientID() {
+            print("configuration client ID: \(clientID)")
+            // NOTE: clientID only. Do NOT set serverClientID unless you do backend code exchange.
+            GIDSignIn.sharedInstance.configuration = GIDConfiguration(clientID: clientID)
         }
-
-        struct GoogleCalendarEvent: Codable {
-            let id: String
-            let summary: String?
-            let start: GoogleDateTime
-            let end: GoogleDateTime
-            let description: String?
-            let location: String?
-
-            struct GoogleDateTime: Codable {
-                let dateTime: String?
-                let date: String?
-                let timeZone: String?
-            }
-        }
-
-        let response = try JSONDecoder().decode(GoogleCalendarResponse.self, from: data)
-
-        // ISO8601 formatter for dateTime strings
-        let isoFormatter = ISO8601DateFormatter()
-        isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "yyyy-MM-dd"
-        dateFormatter.timeZone = TimeZone.current
-
-        let events = response.items?.compactMap { item -> CalendarEvent? in
-            guard let title = item.summary else { 
-                print("⚠️ Google Calendar: Event without summary, skipping")
-                return nil 
-            }
-
-            let startDate: Date
-            let endDate: Date
-            let isAllDay: Bool
-
-            if let dateTime = item.start.dateTime {
-                // Respect timezone if provided and string lacks explicit offset
-                if let tzId = item.start.timeZone, let tz = TimeZone(identifier: tzId) {
-                    isoFormatter.timeZone = tz
-                } else {
-                    isoFormatter.timeZone = TimeZone(secondsFromGMT: 0)
-                }
-                if let parsedDate = isoFormatter.date(from: dateTime) {
-                    startDate = parsedDate
-                    isAllDay = false
-                    print("📅 Google Calendar: Parsed datetime event '\(title)' at \(startDate) (src: \(dateTime))")
-                } else {
-                    print("⚠️ Google Calendar: Failed to parse datetime: \(dateTime)")
-                    startDate = Date()
-                    isAllDay = false
-                }
-            } else if let date = item.start.date {
-                // For all-day events, use the date as-is
-                if let parsedDate = dateFormatter.date(from: date) {
-                    startDate = parsedDate
-                    isAllDay = true
-                    print("📅 Google Calendar: Parsed all-day event '\(title)' on \(startDate)")
-                } else {
-                    print("⚠️ Google Calendar: Failed to parse date: \(date)")
-                    startDate = Date()
-                    isAllDay = true
-                }
-            } else {
-                print("⚠️ Google Calendar: Event without start date, skipping")
-                return nil
-            }
-            
-            // Debug: Print the final parsed date for verification
-            let debugFormatter = DateFormatter()
-            debugFormatter.dateStyle = .medium
-            debugFormatter.timeStyle = .short
-            print("📅 Google Calendar: Final event '\(title)' scheduled for: \(debugFormatter.string(from: startDate))")
-
-            if let dateTime = item.end.dateTime {
-                if let tzId = item.end.timeZone, let tz = TimeZone(identifier: tzId) {
-                    isoFormatter.timeZone = tz
-                }
-                if let parsedDate = isoFormatter.date(from: dateTime) {
-                    endDate = parsedDate
-                } else {
-                    endDate = startDate.addingTimeInterval(3600)
-                }
-            } else if let date = item.end.date {
-                if let parsedDate = dateFormatter.date(from: date) {
-                    endDate = parsedDate
-                } else {
-                    endDate = startDate.addingTimeInterval(86400)
-                }
-            } else {
-                endDate = startDate.addingTimeInterval(isAllDay ? 86400 : 3600)
-            }
-
-            return CalendarEvent(
-                id: item.id,
-                title: title,
-                start: startDate,
-                end: endDate,
-                isAllDay: isAllDay,
-                provider: .google
-            )
-        } ?? []
-        
-        print("📊 Google Calendar: Parsed \(events.count) events")
-        return events
     }
 
-    private func createEventJSON(from event: CalendarEvent) throws -> Data {
-        let formatter = ISO8601DateFormatter()
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "yyyy-MM-dd"
-        dateFormatter.timeZone = TimeZone.current
+    private func getGoogleClientID() -> String? {
+        guard let path = Bundle.main.path(forResource: "Monu-Planner-info", ofType: "plist"),
+              let plist = NSDictionary(contentsOfFile: path),
+              let clientId = plist["CLIENT_ID"] as? String else { return nil }
+        return clientId
+    }
 
-        var eventDict: [String: Any] = [
-            "summary": event.title
+    // Find a reliable presenter (even through nav/tab/presented stacks)
+    private func topViewController(base: UIViewController? = UIApplication.shared
+        .connectedScenes
+        .compactMap { $0 as? UIWindowScene }
+        .flatMap { $0.windows }
+        .first { $0.isKeyWindow }?.rootViewController) -> UIViewController? {
+        if let nav = base as? UINavigationController { return topViewController(base: nav.visibleViewController) }
+        if let tab = base as? UITabBarController { return topViewController(base: tab.selectedViewController) }
+        if let presented = base?.presentedViewController { return topViewController(base: presented) }
+        return base
+    }
+
+    private func getRootViewController() async -> UIViewController? {
+        await MainActor.run { topViewController() }
+    }
+
+    // MARK: - HTTP
+    private func authedJSON(method: String, url: URL, body: [String: Any]?) async throws -> Data {
+        guard let token = accessToken else { throw CalendarError.notConnected }
+        var req = URLRequest(url: url)
+        req.httpMethod = method
+        req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        if let body = body {
+            req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            req.httpBody = try JSONSerialization.data(withJSONObject: body, options: [])
+        }
+        let (data, resp) = try await URLSession.shared.data(for: req)
+        if let http = resp as? HTTPURLResponse, http.statusCode >= 300 {
+            let msg = String(data: data, encoding: .utf8) ?? "Unknown"
+            throw CalendarError.networkError("HTTP \(http.statusCode): \(msg)")
+        }
+        return data
+    }
+
+    private func buildEventsURL(timeMin: String, timeMax: String) throws -> URL {
+        var comps = URLComponents(string: "\(baseURL)/calendars/primary/events")!
+        comps.queryItems = [
+            URLQueryItem(name: "timeMin", value: timeMin),
+            URLQueryItem(name: "timeMax", value: timeMax),
+            URLQueryItem(name: "singleEvents", value: "true"),
+            URLQueryItem(name: "orderBy", value: "startTime"),
+            URLQueryItem(name: "maxResults", value: "2500"),
+            URLQueryItem(name: "showDeleted", value: "false")
         ]
+        guard let url = comps.url else { throw URLError(.badURL) }
+        return url
+    }
 
-        if event.isAllDay {
-            eventDict["start"] = ["date": dateFormatter.string(from: event.start)]
-            eventDict["end"] = ["date": dateFormatter.string(from: event.end)]
+    private func buildInsertURL() throws -> URL {
+        guard let url = URL(string: "\(baseURL)/calendars/primary/events") else { throw URLError(.badURL) }
+        return url
+    }
+
+    private func buildEventURL(eventId: String) throws -> URL {
+        // URL-encode event id to be safe
+        let safe = eventId.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? eventId
+        guard let url = URL(string: "\(baseURL)/calendars/primary/events/\(safe)") else { throw URLError(.badURL) }
+        return url
+    }
+
+    // MARK: - Mapping / bodies
+
+    private struct GEvent: Decodable {
+        struct GDate: Decodable {
+            let dateTime: String?
+            let date: String?
+            let timeZone: String?
+        }
+        let id: String
+        let summary: String?
+        let start: GDate
+        let end: GDate?
+    }
+
+    private enum RFC3339 {
+        static let withFrac: ISO8601DateFormatter = {
+            let f = ISO8601DateFormatter()
+            f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            f.timeZone = TimeZone(secondsFromGMT: 0)
+            return f
+        }()
+        static let noFrac: ISO8601DateFormatter = {
+            let f = ISO8601DateFormatter()
+            f.formatOptions = [.withInternetDateTime]
+            f.timeZone = TimeZone(secondsFromGMT: 0)
+            return f
+        }()
+        static func parse(_ s: String) -> Date? {
+            if let d = withFrac.date(from: s) { return d }
+            return noFrac.date(from: s)
+        }
+    }
+
+    /// yyyy-MM-dd in UTC for all-day values (Google uses exclusive end for all-day)
+    private let ymdUTC: DateFormatter = {
+        let df = DateFormatter()
+        df.calendar = Calendar(identifier: .gregorian)
+        df.locale = Locale(identifier: "en_US_POSIX")
+        df.timeZone = TimeZone(secondsFromGMT: 0)
+        df.dateFormat = "yyyy-MM-dd"
+        return df
+    }()
+
+    private func toRFC3339Local(_ date: Date) -> String {
+        let df = DateFormatter()
+        df.calendar = Calendar(identifier: .gregorian)
+        df.locale = Locale(identifier: "en_US_POSIX")
+        df.timeZone = .current
+        df.dateFormat = "yyyy-MM-dd'T'HH:mm:ssXXXXX"
+        return df.string(from: date)
+    }
+
+    private func mapToCalendarEvent(_ g: GEvent) -> CalendarEvent? {
+        guard let sParsed = parseEventDate(g.start) else { return nil }
+        var start = sParsed.date
+        var isAllDay = sParsed.isAllDay
+
+        var end: Date
+        if let ge = g.end, let eParsed = parseEventDate(ge) {
+            end = eParsed.date
+            isAllDay = isAllDay || eParsed.isAllDay
         } else {
-            eventDict["start"] = [
-                "dateTime": formatter.string(from: event.start),
-                "timeZone": TimeZone.current.identifier
-            ]
-            eventDict["end"] = [
-                "dateTime": formatter.string(from: event.end),
-                "timeZone": TimeZone.current.identifier
-            ]
+            end = start
         }
 
-        return try JSONSerialization.data(withJSONObject: eventDict, options: [])
+        if isAllDay {
+            var cal = Calendar.current
+            cal.timeZone = .current
+            let sLocal = cal.startOfDay(for: start)
+            let eLocal = cal.date(byAdding: .day, value: 1, to: sLocal)!
+            start = sLocal
+            end = eLocal
+        }
+
+        let title = (g.summary?.isEmpty == false) ? g.summary! : "(No title)"
+        return CalendarEvent(
+            id: g.id,
+            title: title,
+            start: start,
+            end: end,
+            isAllDay: isAllDay,
+            provider: .google
+        )
     }
 
-    // MARK: - Additional Helper Methods
-    
-    func forceRefreshConnection() async {
-        print("🔄 Google Calendar: Force refreshing connection...")
-        
-        // Clear current state
-        await MainActor.run {
-            isConnected = false
+    private func parseEventDate(_ d: GEvent.GDate) -> (date: Date, isAllDay: Bool)? {
+        if let dt = d.dateTime, let parsed = RFC3339.parse(dt) {
+            return (parsed, false)
         }
-        accessToken = nil
-        
-        // Check existing sign-in
-        await checkExistingSignIn()
-        
-        if !isConnected {
-            print("🔄 Google Calendar: No existing connection, attempting new authorization...")
-            do {
-                try await requestAuthorization()
-            } catch {
-                print("❌ Google Calendar: Force refresh failed: \(error.localizedDescription)")
-            }
+        if let day = d.date, let parsed = ymdUTC.date(from: day) {
+            return (parsed, true)
         }
+        return nil
     }
-    
-    func getConnectionStatus() -> String {
-        if isConnected {
-            return "Connected"
-        } else if GIDSignIn.sharedInstance.currentUser != nil {
-            return "User signed in but no calendar access"
+
+    private func makeEventBody(from ev: CalendarEvent) throws -> [String: Any] {
+        if ev.isAllDay {
+            let startDay = ymdUTC.string(from: ev.start)
+            let endDay   = ymdUTC.string(from: ev.end) // exclusive end (next day) expected
+            return [
+                "summary": ev.title,
+                "start": ["date": startDay],
+                "end":   ["date": endDay]
+            ]
         } else {
-            return "Not connected"
+            return [
+                "summary": ev.title,
+                "start": ["dateTime": toRFC3339Local(ev.start), "timeZone": TimeZone.current.identifier],
+                "end":   ["dateTime": toRFC3339Local(ev.end),   "timeZone": TimeZone.current.identifier]
+            ]
         }
-    }
-    
-    func getDebugInfo() -> [String: String] {
-        let user = GIDSignIn.sharedInstance.currentUser
-        return [
-            "isConnected": "\(isConnected)",
-            "hasUser": "\(user != nil)",
-            "hasToken": "\(accessToken != nil)",
-            "grantedScopes": "\(user?.grantedScopes?.joined(separator: ", ") ?? "none")",
-            "tokenExpiration": "\(user?.accessToken.expirationDate?.description ?? "unknown")"
-        ]
-    }
-}
-
-// MARK: - Calendar Error Extension
-extension CalendarError {
-    static func authorizationFailed(_ message: String) -> CalendarError {
-        return .networkError("Authorization failed: \(message)")
-    }
-
-    static var invalidRequest: CalendarError {
-        return .networkError("Invalid request")
     }
 }

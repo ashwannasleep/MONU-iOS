@@ -2,14 +2,14 @@ import SwiftUI
 import Amplify
 import Foundation
 
-// MARK: - YearlyPopupView with Fixed Bugs
+// MARK: - YearlyPopupView with Per-Date Daily Task History
 struct YearlyPopupView: View {
     @State private var selectedDate: Date
     @State private var newTaskTitle: String = ""
     @State private var selectedTaskDate: Date
     @State private var selectedTime: Date = Date()
     @State private var yearlyTasks: [YearlyPopupTask] = []
-    @State private var dailyTasks: [DailyTask] = []
+    @State private var allDailyTasks: [DailyTask] = []
     @State private var isLoading = false
     @State private var currentMonth: Date
     @State private var showingDatePicker = false
@@ -31,37 +31,37 @@ struct YearlyPopupView: View {
             ZStack {
                 backgroundColor
                     .ignoresSafeArea()
-                
+
                 ScrollView {
                     VStack(spacing: 0) {
                         // Header with improved calendar
                         improvedCalendarHeader
                             .padding(.horizontal, 24)
                             .padding(.top, 60)
-                        
+
                         // Task input section
                         taskInputSection
                             .padding(.horizontal, 24)
                             .padding(.top, 24)
-                        
-                        // Tasks sections
+
+                        // Tasks sections (now only for the selected date)
                         tasksView
                             .padding(.horizontal, 24)
                             .padding(.top, 24)
                             .padding(.bottom, 100) // Extra bottom padding for scroll
                     }
                 }
-                
+
                 // Loading overlay
                 if isLoading {
                     Color.black.opacity(0.3)
                         .ignoresSafeArea()
-                    
+
                     VStack {
                         ProgressView()
                             .scaleEffect(1.2)
                             .progressViewStyle(CircularProgressViewStyle(tint: accentColor))
-                        
+
                         Text("Loading tasks...")
                             .font(.system(size: 16, weight: .medium))
                             .foregroundColor(.white)
@@ -83,28 +83,47 @@ struct YearlyPopupView: View {
             }
         }
     }
-    
+
     // MARK: - Computed Properties
     private var backgroundColor: Color {
         colorScheme == .dark ? Color(red: 0.12, green: 0.12, blue: 0.12) : Color(red: 0.97, green: 0.96, blue: 0.94)
     }
-    
+
     private var accentColor: Color {
         themeManager.accentColor
     }
-    
+
     private var cardBackgroundColor: Color {
         colorScheme == .dark ? Color(red: 0.18, green: 0.18, blue: 0.18) : Color.white
     }
-    
+
     private var textColor: Color {
         colorScheme == .dark ? .white : Color(red: 0.18, green: 0.18, blue: 0.18)
     }
-    
+
     private var secondaryTextColor: Color {
         colorScheme == .dark ? Color(red: 0.7, green: 0.7, blue: 0.7) : Color(red: 0.5, green: 0.5, blue: 0.5)
     }
-    
+
+    // Key used for grouping dates (yyyy-MM-dd) for the currently selected day
+    private var selectedDateKey: String {
+        let df = DateFormatter()
+        df.dateFormat = "yyyy-MM-dd"
+        return df.string(from: selectedTaskDate)
+    }
+
+    // Only the Daily Plan tasks that match the selected day
+    private var dailyTasksForSelectedDate: [DailyTask] {
+        allDailyTasks
+            .filter { calendar.isDate($0.date.foundationDate, inSameDayAs: selectedTaskDate) }
+            .sorted { ($0.order ?? 0) < ($1.order ?? 0) }
+    }
+
+    // Group daily tasks by date (kept for the DailyTasksGroupView header formatting)
+    private var groupedDailyTasksForSelectedDate: [(String, [DailyTask])] {
+        dailyTasksForSelectedDate.isEmpty ? [] : [(selectedDateKey, dailyTasksForSelectedDate)]
+    }
+
     // MARK: - Improved Calendar Header
     private var improvedCalendarHeader: some View {
         VStack(spacing: 20) {
@@ -115,9 +134,9 @@ struct YearlyPopupView: View {
                         .font(.system(size: 18, weight: .medium))
                         .foregroundColor(accentColor)
                 }
-                
+
                 Spacer()
-                
+
                 // Month/Year title - clickable
                 Button(action: { showingDatePicker = true }) {
                     Text(currentMonth, formatter: monthYearFormatter)
@@ -125,9 +144,9 @@ struct YearlyPopupView: View {
                         .foregroundColor(textColor)
                 }
                 .buttonStyle(PlainButtonStyle())
-                
+
                 Spacer()
-                
+
                 Button(action: nextMonth) {
                     Image(systemName: "chevron.right")
                         .font(.system(size: 18, weight: .medium))
@@ -135,7 +154,7 @@ struct YearlyPopupView: View {
                 }
             }
             .padding(.horizontal, 8)
-            
+
             // Improved calendar card
             VStack(spacing: 16) {
                 // Weekday headers
@@ -147,7 +166,7 @@ struct YearlyPopupView: View {
                             .frame(maxWidth: .infinity)
                     }
                 }
-                
+
                 // Clickable calendar grid
                 LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 7), spacing: 8) {
                     ForEach(generateCalendarGrid(for: currentMonth), id: \.self) { date in
@@ -179,26 +198,26 @@ struct YearlyPopupView: View {
             DatePickerView(selectedDate: $currentMonth, mode: .month)
         }
     }
-    
+
     // MARK: - Fixed Calendar Helper Functions
     private func previousMonth() {
         if let newDate = calendar.date(byAdding: .month, value: -1, to: currentMonth) {
             currentMonth = newDate
         }
     }
-    
+
     private func nextMonth() {
         if let newDate = calendar.date(byAdding: .month, value: 1, to: currentMonth) {
             currentMonth = newDate
         }
     }
-    
+
     private func selectDate(_ date: Date) {
         selectedTaskDate = date
         selectedDate = date
-        fetchTasks() // Refresh tasks when date changes
+        fetchTasks() // Refresh tasks when date changes (kept; UI now filters by day)
     }
-    
+
     private func getDateTextColor(for date: Date) -> Color {
         if calendar.isDate(date, inSameDayAs: selectedTaskDate) {
             return .white
@@ -208,27 +227,27 @@ struct YearlyPopupView: View {
             return textColor
         }
     }
-    
+
     private func getDateBackgroundColor(for date: Date) -> Color {
         if calendar.isDate(date, inSameDayAs: selectedTaskDate) {
-            return Color(red: 0.2, green: 0.6, blue: 0.8) // Subtle blue instead of pink
+            return Color(red: 0.2, green: 0.6, blue: 0.8) // Selected day
         } else if calendar.isDate(date, inSameDayAs: Date()) {
-            return Color(red: 0.2, green: 0.6, blue: 0.8).opacity(0.2) // Subtle blue with opacity
+            return Color(red: 0.2, green: 0.6, blue: 0.8).opacity(0.2) // Today
         } else {
             return Color.clear
         }
     }
-    
+
     private func generateCalendarGrid(for month: Date) -> [Date?] {
         let startOfMonth = calendar.dateInterval(of: .month, for: month)?.start ?? month
         let endOfMonth = calendar.dateInterval(of: .month, for: month)?.end ?? month
-        
+
         let startOfWeek = calendar.dateInterval(of: .weekOfYear, for: startOfMonth)?.start ?? startOfMonth
         let endOfWeek = calendar.dateInterval(of: .weekOfYear, for: endOfMonth)?.end ?? endOfMonth
-        
+
         var dates: [Date?] = []
         var currentDate = startOfWeek
-        
+
         while currentDate < endOfWeek {
             if calendar.isDate(currentDate, equalTo: startOfMonth, toGranularity: .month) {
                 dates.append(currentDate)
@@ -237,10 +256,10 @@ struct YearlyPopupView: View {
             }
             currentDate = calendar.date(byAdding: .day, value: 1, to: currentDate) ?? currentDate
         }
-        
+
         return dates
     }
-    
+
     // MARK: - Task Input Section
     private var taskInputSection: some View {
         VStack(spacing: 16) {
@@ -251,7 +270,7 @@ struct YearlyPopupView: View {
                     .foregroundColor(textColor)
                 Spacer()
             }
-            
+
             // Input card
             VStack(spacing: 16) {
                 // Task title input
@@ -259,7 +278,7 @@ struct YearlyPopupView: View {
                     Text("Task Title")
                         .font(.system(size: 14, weight: .medium))
                         .foregroundColor(secondaryTextColor)
-                    
+
                     TextField("Enter task title...", text: $newTaskTitle)
                         .font(.system(size: 16))
                         .padding(16)
@@ -270,14 +289,14 @@ struct YearlyPopupView: View {
                                 .stroke(themeManager.accentColor.opacity(0.3), lineWidth: 1)
                         )
                 }
-                
+
                 // Date and time pickers
                 HStack(spacing: 12) {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Date")
                             .font(.system(size: 14, weight: .medium))
                             .foregroundColor(secondaryTextColor)
-                        
+
                         Button(action: { showingTaskDatePicker = true }) {
                             HStack {
                                 Text(selectedTaskDate, formatter: dateFormatter)
@@ -298,12 +317,12 @@ struct YearlyPopupView: View {
                         }
                         .buttonStyle(PlainButtonStyle())
                     }
-                    
+
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Time")
                             .font(.system(size: 14, weight: .medium))
                             .foregroundColor(secondaryTextColor)
-                        
+
                         DatePicker("", selection: $selectedTime, displayedComponents: .hourAndMinute)
                             .labelsHidden()
                             .frame(maxWidth: .infinity)
@@ -316,7 +335,7 @@ struct YearlyPopupView: View {
                             )
                     }
                 }
-                
+
                 // Add button
                 Button(action: addTask) {
                     HStack {
@@ -343,29 +362,28 @@ struct YearlyPopupView: View {
             DatePickerView(selectedDate: $selectedTaskDate, mode: .date)
         }
     }
-    
-    // MARK: - Tasks View
+
+    // MARK: - Tasks View (Per-Day History)
     private var tasksView: some View {
         VStack(spacing: 16) {
             // Section title
             HStack {
-                Text("Today Tasks")
+                Text("Task History")
                     .font(.system(size: 18, weight: .semibold, design: .default))
                     .foregroundColor(textColor)
                 Spacer()
             }
-            
-            // Tasks sections
+
             VStack(spacing: 20) {
-                // Daily Tasks Section
-                if !dailyTasks.isEmpty {
-                    VStack(alignment: .leading, spacing: 12) {
+                // Daily Tasks Section - Only for the selected day
+                if !dailyTasksForSelectedDate.isEmpty {
+                    VStack(alignment: .leading, spacing: 16) {
                         HStack {
                             Text("Daily Plan Tasks")
                                 .font(.system(size: 16, weight: .semibold, design: .default))
                                 .foregroundColor(textColor)
                             Spacer()
-                            Text("\(dailyTasks.count)")
+                            Text("\(dailyTasksForSelectedDate.count) total")
                                 .font(.system(size: 12, weight: .medium))
                                 .foregroundColor(.secondary)
                                 .padding(.horizontal, 8)
@@ -373,17 +391,43 @@ struct YearlyPopupView: View {
                                 .background(Color.secondary.opacity(0.2))
                                 .cornerRadius(8)
                         }
-                        
-                        ForEach(dailyTasks, id: \.id) { task in
-                            DailyTaskRow(task: task, onToggle: toggleDailyTaskDone, onDelete: deleteDailyTask, colorScheme: colorScheme)
+
+                        ForEach(groupedDailyTasksForSelectedDate, id: \.0) { dateString, tasksForDate in
+                            DailyTasksGroupView(
+                                dateString: dateString,
+                                tasks: tasksForDate,
+                                onToggle: toggleDailyTaskDone,
+                                onDelete: deleteDailyTask,
+                                colorScheme: colorScheme
+                            )
                         }
                     }
                     .padding(16)
                     .background(cardBackgroundColor)
                     .cornerRadius(12)
+                } else {
+                    // Empty state for daily tasks
+                    VStack(spacing: 12) {
+                        Image(systemName: "calendar.badge.clock")
+                            .font(.system(size: 40))
+                            .foregroundColor(.secondary.opacity(0.5))
+
+                        Text("No daily tasks for this date")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(.secondary)
+
+                        Text("Pick a date above or add a task to get started")
+                            .font(.system(size: 14))
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(32)
+                    .background(cardBackgroundColor)
+                    .cornerRadius(12)
                 }
-                
-                // Yearly Tasks Section
+
+                // Yearly Tasks Section (unchanged)
                 HStack(alignment: .top, spacing: 16) {
                     // To Do section
                     ImprovedTaskSectionView(
@@ -394,7 +438,7 @@ struct YearlyPopupView: View {
                         onDelete: deleteYearlyTask,
                         colorScheme: colorScheme
                     )
-                    
+
                     // Completed section
                     ImprovedTaskSectionView(
                         title: "\("Yearly Tasks") - \("Completed")",
@@ -408,41 +452,32 @@ struct YearlyPopupView: View {
             }
         }
     }
-    
+
     // MARK: - Amplify Functions
-    
     private func fetchTasks() {
         guard !isLoading else { return } // Prevent multiple simultaneous requests
-        
+
         isLoading = true
-        
+
         Task {
             do {
                 // Fetch yearly tasks for the current month
                 let monthString = monthString(from: currentMonth)
                 let yearlyResult = try await Amplify.API.query(request: .list(YearlyPopupTask.self)).get()
-                
-                // Fetch daily tasks for the selected date
-                let dateFormatter = DateFormatter()
-                dateFormatter.dateFormat = "yyyy-MM-dd"
-                let selectedDateString = dateFormatter.string(from: selectedTaskDate)
+
+                // Fetch ALL daily tasks (client filters by selected date)
                 let dailyResult = try await Amplify.API.query(
                     request: .list(DailyTask.self)
                 ).get()
-                
+
                 await MainActor.run {
                     self.yearlyTasks = yearlyResult.filter { $0.month == monthString }
-                    
-                    // Filter daily tasks to only show tasks for the selected date
-                    let dateFormatter = DateFormatter()
-                    dateFormatter.dateFormat = "yyyy-MM-dd"
-                    let selectedDateString = dateFormatter.string(from: selectedTaskDate)
-                    
-                    self.dailyTasks = Array(dailyResult).filter { task in
-                        let taskDateString = dateFormatter.string(from: task.date.foundationDate)
-                        return taskDateString == selectedDateString
+
+                    // Store all daily tasks (sorted newest first; UI filters to the selected day)
+                    self.allDailyTasks = Array(dailyResult).sorted { t1, t2 in
+                        t1.date.foundationDate > t2.date.foundationDate
                     }
-                    
+
                     self.isLoading = false
                 }
             } catch {
@@ -452,33 +487,34 @@ struct YearlyPopupView: View {
             }
         }
     }
-    
+
     private func addTask() {
         guard !newTaskTitle.isEmpty else { return }
-        
+
         // Create daily task with time
         let timeFormatter = DateFormatter()
         timeFormatter.dateFormat = "HH:mm"
         let timeString = timeFormatter.string(from: selectedTime)
-        
+
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyy-MM-dd"
         let dateString = dateFormatter.string(from: selectedTaskDate)
-        
+
         let newDailyTask = DailyTask(
             date: try! Temporal.Date(iso8601String: dateString),
             text: newTaskTitle,
             time: timeString,
-            order: dailyTasks.count,
+            order: dailyTasksForSelectedDate.count, // order within the selected day
             done: false,
             owner: nil
         )
-        
+
         Task {
             do {
                 let result = try await Amplify.API.mutate(request: .create(newDailyTask)).get()
                 await MainActor.run {
-                    self.dailyTasks.append(result)
+                    // Insert only affects the selected day collection visually
+                    self.allDailyTasks.insert(result, at: 0)
                     self.newTaskTitle = ""
                     self.selectedTime = Date()
                 }
@@ -487,11 +523,11 @@ struct YearlyPopupView: View {
             }
         }
     }
-    
+
     private func toggleYearlyTaskDone(_ task: YearlyPopupTask) {
         var updatedTask = task
         updatedTask.done = !(task.done ?? false)
-        
+
         Task {
             do {
                 let result = try await Amplify.API.mutate(request: .update(updatedTask)).get()
@@ -505,7 +541,7 @@ struct YearlyPopupView: View {
             }
         }
     }
-    
+
     private func deleteYearlyTask(_ task: YearlyPopupTask) {
         Task {
             do {
@@ -518,17 +554,17 @@ struct YearlyPopupView: View {
             }
         }
     }
-    
+
     private func toggleDailyTaskDone(_ task: DailyTask) {
         var updatedTask = task
         updatedTask.done = !(task.done ?? false)
-        
+
         Task {
             do {
                 let result = try await Amplify.API.mutate(request: .update(updatedTask)).get()
                 await MainActor.run {
-                    if let index = self.dailyTasks.firstIndex(where: { $0.id == task.id }) {
-                        self.dailyTasks[index] = result
+                    if let index = self.allDailyTasks.firstIndex(where: { $0.id == task.id }) {
+                        self.allDailyTasks[index] = result
                     }
                 }
             } catch {
@@ -536,22 +572,21 @@ struct YearlyPopupView: View {
             }
         }
     }
-    
+
     private func deleteDailyTask(_ task: DailyTask) {
         Task {
             do {
                 _ = try await Amplify.API.mutate(request: .delete(task))
                 await MainActor.run {
-                    self.dailyTasks.removeAll { $0.id == task.id }
+                    self.allDailyTasks.removeAll { $0.id == task.id }
                 }
             } catch {
                 // Task deletion failed silently
             }
         }
     }
-    
+
     // MARK: - Helper Functions
-    
     private var monthYearFormatter: DateFormatter {
         let formatter = DateFormatter()
         formatter.dateFormat = "MMMM yyyy"
@@ -571,6 +606,92 @@ struct YearlyPopupView: View {
     }
 }
 
+// MARK: - DailyTasksGroupView Component
+struct DailyTasksGroupView: View {
+    let dateString: String
+    let tasks: [DailyTask]
+    let onToggle: (DailyTask) -> Void
+    let onDelete: (DailyTask) -> Void
+    let colorScheme: ColorScheme
+    @EnvironmentObject var themeManager: ThemeManager
+
+    private var formattedDate: String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+
+        if let date = formatter.date(from: dateString) {
+            let displayFormatter = DateFormatter()
+
+            if Calendar.current.isDateInToday(date) {
+                return "Today"
+            } else if Calendar.current.isDateInYesterday(date) {
+                return "Yesterday"
+            } else {
+                displayFormatter.dateFormat = "EEEE, MMM dd"
+                return displayFormatter.string(from: date)
+            }
+        }
+        return dateString
+    }
+
+    private var completedCount: Int {
+        tasks.filter { $0.done == true }.count
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            // Date header with progress
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(formattedDate)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(colorScheme == .dark ? .white : Color(red: 0.18, green: 0.18, blue: 0.18))
+
+                    Text("\(completedCount)/\(tasks.count) completed")
+                        .font(.system(size: 12))
+                        .foregroundColor(.secondary)
+                }
+
+                Spacer()
+
+                // Progress circle
+                ZStack {
+                    Circle()
+                        .stroke(Color.secondary.opacity(0.3), lineWidth: 3)
+                        .frame(width: 24, height: 24)
+
+                    Circle()
+                        .trim(from: 0, to: tasks.isEmpty ? 0 : CGFloat(completedCount) / CGFloat(tasks.count))
+                        .stroke(themeManager.accentColor, lineWidth: 3)
+                        .frame(width: 24, height: 24)
+                        .rotationEffect(.degrees(-90))
+                        .animation(.easeInOut(duration: 0.3), value: completedCount)
+                }
+            }
+            .padding(.bottom, 8)
+
+            // Tasks for this date
+            ForEach(tasks.sorted { ($0.order ?? 0) < ($1.order ?? 0) }, id: \.id) { task in
+                DailyTaskRow(
+                    task: task,
+                    onToggle: onToggle,
+                    onDelete: onDelete,
+                    colorScheme: colorScheme
+                )
+            }
+        }
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 8)
+                .fill(colorScheme == .dark ? Color(red: 0.15, green: 0.15, blue: 0.15) : Color(red: 0.98, green: 0.98, blue: 0.98))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
+        )
+    }
+}
+
 // MARK: - DailyTaskRow Component
 struct DailyTaskRow: View {
     let task: DailyTask
@@ -578,7 +699,7 @@ struct DailyTaskRow: View {
     let onDelete: (DailyTask) -> Void
     let colorScheme: ColorScheme
     @EnvironmentObject var themeManager: ThemeManager
-    
+
     var body: some View {
         HStack(spacing: 12) {
             // Checkbox
@@ -588,7 +709,7 @@ struct DailyTaskRow: View {
                     .foregroundColor(task.done == true ? themeManager.accentColor : .gray)
             }
             .buttonStyle(PlainButtonStyle())
-            
+
             // Task content
             VStack(alignment: .leading, spacing: 4) {
                 Text(task.text)
@@ -596,16 +717,16 @@ struct DailyTaskRow: View {
                     .foregroundColor(colorScheme == .dark ? .white : Color(red: 0.18, green: 0.18, blue: 0.18))
                     .strikethrough(task.done == true)
                     .opacity(task.done == true ? 0.6 : 1.0)
-                
+
                 if let time = task.time, !time.isEmpty {
                     Text(time)
                         .font(.system(size: 12))
                         .foregroundColor(.secondary)
                 }
             }
-            
+
             Spacer()
-            
+
             // Delete button
             Button(action: { onDelete(task) }) {
                 Image(systemName: "trash")
@@ -624,12 +745,12 @@ struct DatePickerView: View {
     let mode: DatePickerMode
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
-    
+
     enum DatePickerMode {
         case date
         case month
     }
-    
+
     var body: some View {
         NavigationView {
             VStack(spacing: 20) {
@@ -642,7 +763,7 @@ struct DatePickerView: View {
                         .datePickerStyle(.wheel)
                         .padding()
                 }
-                
+
                 Spacer()
             }
             .navigationTitle(mode == .date ? "Select Date" : "Select Month")
@@ -672,7 +793,7 @@ struct ImprovedTaskSectionView: View {
     let onToggle: (YearlyPopupTask) -> Void
     let onDelete: (YearlyPopupTask) -> Void
     let colorScheme: ColorScheme
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             // Section header
@@ -680,9 +801,9 @@ struct ImprovedTaskSectionView: View {
                 Text(title)
                     .font(.system(size: 16, weight: .semibold, design: .default))
                     .foregroundColor(colorScheme == .dark ? .white : Color(red: 0.18, green: 0.18, blue: 0.18))
-                
+
                 Spacer()
-                
+
                 Text("\(tasks.count)")
                     .font(.system(size: 12, weight: .medium))
                     .foregroundColor(.secondary)
@@ -691,14 +812,14 @@ struct ImprovedTaskSectionView: View {
                     .background(Color.secondary.opacity(0.2))
                     .cornerRadius(8)
             }
-            
+
             // Tasks list
             if tasks.isEmpty {
                 VStack(spacing: 8) {
                     Image(systemName: title.contains("To Do") ? "checklist" : "checkmark.circle")
                         .font(.system(size: 24))
                         .foregroundColor(.secondary)
-                    
+
                     Text(title.contains("To Do") ? "No tasks yet" : "No completed tasks")
                         .font(.system(size: 14))
                         .foregroundColor(.secondary)
@@ -733,14 +854,14 @@ struct ImprovedYearlyTaskRow: View {
     let onDelete: (YearlyPopupTask) -> Void
     let colorScheme: ColorScheme
     @EnvironmentObject var themeManager: ThemeManager
-    
+
     var body: some View {
         HStack(spacing: 12) {
             // Toggle button
             Button(action: { onToggle(task) }) {
                 Image(systemName: task.done ?? false ? "checkmark.circle.fill" : "circle")
                     .font(.system(size: 18))
-                                            .foregroundColor(task.done ?? false ? themeManager.accentColor : .secondary)
+                    .foregroundColor(task.done ?? false ? themeManager.accentColor : .secondary)
             }
             .buttonStyle(PlainButtonStyle())
 
@@ -767,3 +888,4 @@ struct ImprovedYearlyTaskRow: View {
         .cornerRadius(8)
     }
 }
+

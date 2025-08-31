@@ -201,11 +201,22 @@ struct SettingsPage: View {
                 }
                 .buttonStyle(PlainButtonStyle())
                 
-                // Sign Out Button
                 Button(action: {
                     Task {
                         await authManager.signOut()
+                        await MainActor.run {
+                            // Clear navigation
+                            navigationManager.navigationPath.removeAll()
+                            
+                            // Reset auth state
+                            authManager.isAuthenticated = false
+                            
+                            // Clear user data
+                            UserDefaults.standard.removeObject(forKey: "user_email")
+                            UserDefaults.standard.removeObject(forKey: "monu_name")
+                        }
                     }
+                
                 }) {
                     HStack {
                         Image(systemName: "rectangle.portrait.and.arrow.right")

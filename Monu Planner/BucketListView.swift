@@ -38,14 +38,13 @@ struct BucketListItem: Identifiable, Codable, Hashable {
     }
     
     func toAPIBucketItem() -> BucketItem {
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "yyyy-MM-dd"
-        
+        let df = DateFormatter()
+        df.dateFormat = "yyyy-MM-dd"
         return BucketItem(
             id: self.id,
             text: self.text,
             category: self.category,
-            date: self.date != nil ? try? Temporal.Date(iso8601String: dateFormatter.string(from: self.date!)) : nil,
+            date: self.date != nil ? try? Temporal.Date(iso8601String: df.string(from: self.date!)) : nil,
             link: self.link,
             done: self.done,
             owner: self.owner
@@ -87,39 +86,23 @@ struct BucketListView: View {
         totalItems == 0 ? 0 : Int(round(Double(completedCount) / Double(totalItems) * 100))
     }
     
-    private var backgroundColor: Color {
-        themeManager.backgroundColor
-    }
-    
-    private var textColor: Color {
-        themeManager.textColor
-    }
-    
-    private var cardBackgroundColor: Color {
-        themeManager.cardBackgroundColor
-    }
+    private var backgroundColor: Color { themeManager.backgroundColor }
+    private var textColor: Color { themeManager.textColor }
+    private var cardBackgroundColor: Color { themeManager.cardBackgroundColor }
 
     var body: some View {
         ZStack {
-            backgroundColor
-                .ignoresSafeArea()
+            backgroundColor.ignoresSafeArea()
             
             ScrollViewReader(scrollOffset: $scrollOffset) { _ in
                 VStack(spacing: 0) {
-                    // Header
                     headerView
-                    
-                    // Progress Section
                     progressView
                         .padding(.horizontal, 20)
                         .padding(.bottom, 24)
-                    
-                    // Input Section
                     inputSection
                         .padding(.horizontal, 20)
                         .padding(.bottom, 24)
-                    
-                    // Items List
                     itemsList
                         .padding(.horizontal, 20)
                         .padding(.bottom, 40)
@@ -142,13 +125,9 @@ struct BucketListView: View {
             }
         }
         .navigationBarHidden(true)
-        .onAppear {
-            fetchItems()
-        }
+        .onAppear { fetchItems() }
         .onChange(of: authManager.isAuthenticated) { isAuthenticated in
-            if isAuthenticated && items.isEmpty {
-                fetchItems()
-            }
+            if isAuthenticated && items.isEmpty { fetchItems() }
         }
         .alert("Error", isPresented: $showError) {
             Button("OK") { showError = false }
@@ -160,9 +139,7 @@ struct BucketListView: View {
     // MARK: - Header View
     private var headerView: some View {
         VStack(spacing: 0) {
-            Button(action: {
-                navigationManager.navigateToRoot()
-            }) {
+            Button(action: { navigationManager.navigateToRoot() }) {
                 Text("MONU")
                     .font(.custom("Georgia", size: 32))
                     .fontWeight(.bold)
@@ -185,13 +162,11 @@ struct BucketListView: View {
     // MARK: - Progress View
     private var progressView: some View {
         VStack(spacing: 8) {
-            // Progress Bar
             GeometryReader { geometry in
                 ZStack(alignment: .leading) {
                     RoundedRectangle(cornerRadius: 6)
                         .fill(themeManager.colorScheme == .dark ? Color(red: 0.27, green: 0.27, blue: 0.27) : Color(red: 0.90, green: 0.91, blue: 0.92))
                         .frame(height: 12)
-                    
                     RoundedRectangle(cornerRadius: 6)
                         .fill(themeManager.accentColor)
                         .frame(width: geometry.size.width * CGFloat(progressPercent) / 100, height: 12)
@@ -199,7 +174,6 @@ struct BucketListView: View {
                 }
             }
             .frame(height: 12)
-            
             Text("\(progressPercent)% complete (\(completedCount) of \(totalItems) items)")
                 .font(.custom("Georgia", size: 14))
                 .foregroundColor(.secondary)
@@ -215,17 +189,10 @@ struct BucketListView: View {
                     .font(.custom("Georgia", size: 16))
                     .padding(12)
                     .background(cardBackgroundColor)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 8)
-                            .stroke(themeManager.accentColor.opacity(0.3), lineWidth: 1)
-                    )
+                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(themeManager.accentColor.opacity(0.3), lineWidth: 1))
                     .cornerRadius(8)
                     .disabled(isLoading)
-                    .onSubmit {
-                        if !isLoading {
-                            addItem()
-                        }
-                    }
+                    .onSubmit { if !isLoading { addItem() } }
             }
             
             // Category, Date, Link row
@@ -233,58 +200,40 @@ struct BucketListView: View {
                 HStack(spacing: 12) {
                     // Category Picker
                     Menu {
-                        Button("None") {
-                            selectedCategory = nil
-                        }
+                        Button("None") { selectedCategory = nil }
                         ForEach(BucketCategory.allCases, id: \.self) { category in
-                            Button(category.displayName) {
-                                selectedCategory = category
-                            }
+                            Button(category.displayName) { selectedCategory = category }
                         }
                     } label: {
                         HStack {
                             Text(selectedCategory?.displayName ?? "Category")
                                 .foregroundColor(selectedCategory == nil ? .secondary : textColor)
                             Spacer()
-                            Image(systemName: "chevron.down")
-                                .foregroundColor(.secondary)
-                                .font(.caption)
+                            Image(systemName: "chevron.down").foregroundColor(.secondary).font(.caption)
                         }
                         .font(.custom("Georgia", size: 16))
                         .padding(12)
                         .background(cardBackgroundColor)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 8)
-                                .stroke(themeManager.accentColor.opacity(0.3), lineWidth: 1)
-                        )
+                        .overlay(RoundedRectangle(cornerRadius: 8).stroke(themeManager.accentColor.opacity(0.3), lineWidth: 1))
                         .cornerRadius(8)
                     }
                     .disabled(isLoading)
                     
                     // Date Button
-                    Button(action: {
-                        showDatePicker.toggle()
-                    }) {
+                    Button(action: { showDatePicker.toggle() }) {
                         HStack {
                             if let date = selectedDate {
-                                Text(date.formatted(date: .abbreviated, time: .omitted))
-                                    .foregroundColor(textColor)
+                                Text(date.formatted(date: .abbreviated, time: .omitted)).foregroundColor(textColor)
                             } else {
-                                Text("Date")
-                                    .foregroundColor(.secondary)
+                                Text("Date").foregroundColor(.secondary)
                             }
                             Spacer()
-                            Image(systemName: "calendar")
-                                .foregroundColor(.secondary)
-                                .font(.caption)
+                            Image(systemName: "calendar").foregroundColor(.secondary).font(.caption)
                         }
                         .font(.custom("Georgia", size: 16))
                         .padding(12)
                         .background(cardBackgroundColor)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 8)
-                                .stroke(themeManager.accentColor.opacity(0.3), lineWidth: 1)
-                        )
+                        .overlay(RoundedRectangle(cornerRadius: 8).stroke(themeManager.accentColor.opacity(0.3), lineWidth: 1))
                         .cornerRadius(8)
                     }
                     .disabled(isLoading)
@@ -296,17 +245,10 @@ struct BucketListView: View {
                         .font(.custom("Georgia", size: 16))
                         .padding(12)
                         .background(cardBackgroundColor)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 8)
-                                .stroke(themeManager.accentColor.opacity(0.3), lineWidth: 1)
-                        )
+                        .overlay(RoundedRectangle(cornerRadius: 8).stroke(themeManager.accentColor.opacity(0.3), lineWidth: 1))
                         .cornerRadius(8)
                         .disabled(isLoading)
-                        .onSubmit {
-                            if !isLoading {
-                                addItem()
-                            }
-                        }
+                        .onSubmit { if !isLoading { addItem() } }
                 }
             }
             
@@ -314,9 +256,7 @@ struct BucketListView: View {
             Button(action: addItem) {
                 HStack {
                     if isLoading {
-                        ProgressView()
-                            .scaleEffect(0.8)
-                            .foregroundColor(.white)
+                        ProgressView().scaleEffect(0.8).foregroundColor(.white)
                         Text("Adding...")
                     } else {
                         Text("＋ Add Item")
@@ -329,8 +269,8 @@ struct BucketListView: View {
                 .padding(12)
                 .background(
                     newItemText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isLoading
-                        ? themeManager.accentColor.opacity(0.3)
-                        : Color(red: 0.78, green: 0.75, blue: 0.70)
+                    ? themeManager.accentColor.opacity(0.3)
+                    : Color(red: 0.78, green: 0.75, blue: 0.70)
                 )
                 .cornerRadius(8)
             }
@@ -351,15 +291,10 @@ struct BucketListView: View {
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .navigationBarLeading) {
-                        Button("Clear") {
-                            selectedDate = nil
-                            showDatePicker = false
-                        }
+                        Button("Clear") { selectedDate = nil; showDatePicker = false }
                     }
                     ToolbarItem(placement: .navigationBarTrailing) {
-                        Button("Done") {
-                            showDatePicker = false
-                        }
+                        Button("Done") { showDatePicker = false }
                     }
                 }
             }
@@ -386,11 +321,10 @@ struct BucketListView: View {
         }
     }
     
-    // MARK: - Loading View
+    // MARK: - Loading / Empty
     private var loadingView: some View {
         VStack(spacing: 16) {
-            ProgressView()
-                .scaleEffect(1.5)
+            ProgressView().scaleEffect(1.5)
             Text("Loading your bucket list...")
                 .font(.custom("Georgia", size: 16))
                 .foregroundColor(.secondary)
@@ -399,7 +333,6 @@ struct BucketListView: View {
         .padding(48)
     }
     
-    // MARK: - Empty State View
     private var emptyStateView: some View {
         VStack(spacing: 16) {
             Text("Your bucket list is empty")
@@ -416,15 +349,13 @@ struct BucketListView: View {
     // MARK: - Methods
     private func fetchItems() {
         isLoading = true
-        
         Task {
-            // Wait for authentication to be ready
+            // Wait briefly for auth
             var attempts = 0
             while !authManager.isAuthenticated && attempts < 10 {
-                try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+                try? await Task.sleep(nanoseconds: 500_000_000) // 0.5s
                 attempts += 1
             }
-            
             guard authManager.isAuthenticated else {
                 await MainActor.run {
                     self.errorMessage = "Please sign in to view bucket list"
@@ -433,7 +364,6 @@ struct BucketListView: View {
                 }
                 return
             }
-            
             do {
                 let result = try await Amplify.API.query(request: .list(BucketItem.self))
                 await MainActor.run {
@@ -461,13 +391,11 @@ struct BucketListView: View {
     private func addItem() {
         let trimmedText = newItemText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedText.isEmpty else { return }
-        
         guard authManager.isAuthenticated else {
             errorMessage = "Please sign in to save bucket list items"
             showError = true
             return
         }
-        
         let newItem = BucketListItem(
             text: trimmedText,
             category: selectedCategory?.rawValue,
@@ -475,9 +403,7 @@ struct BucketListView: View {
             link: linkText.isEmpty ? nil : linkText,
             done: false
         )
-        
         isLoading = true
-        
         Task {
             do {
                 let apiItem = newItem.toAPIBucketItem()
@@ -505,39 +431,33 @@ struct BucketListView: View {
     
     private func toggleDone(at index: Int) {
         guard index < items.count else { return }
-        
         guard authManager.isAuthenticated else {
             errorMessage = "Please sign in to update items"
             showError = true
             return
         }
-        
-        let item = items[index]
-        items[index].done.toggle()
+        let original = items[index]
+        items[index].done.toggle() // optimistic
         
         Task {
             do {
-                var updatedItem = item
-                updatedItem.done = !item.done
-                let apiItem = updatedItem.toAPIBucketItem()
+                var updated = original
+                updated.done = !original.done
+                let apiItem = updated.toAPIBucketItem()
                 let result = try await Amplify.API.mutate(request: .update(apiItem))
-                
                 switch result {
-                case .success(_):
-                    // Success - item already updated in UI
-                    break
+                case .success:
+                    break // OK
                 case .failure(let error):
                     await MainActor.run {
-                        // Revert on error
-                        self.items[index].done = item.done
+                        self.items[index] = original // revert
                         self.errorMessage = "Failed to update item: \(error.localizedDescription)"
                         self.showError = true
                     }
                 }
             } catch {
                 await MainActor.run {
-                    // Revert on error
-                    self.items[index].done = item.done
+                    self.items[index] = original // revert
                     self.errorMessage = "Failed to update item: \(error.localizedDescription)"
                     self.showError = true
                 }
@@ -547,26 +467,43 @@ struct BucketListView: View {
     
     private func deleteItem(at index: Int) {
         guard index < items.count else { return }
-        
-        _ = items[index]
-        items.remove(at: index)
-        
-        // Mock implementation - replace with actual Amplify API calls
-        /* Actual Amplify implementation:
+        guard authManager.isAuthenticated else {
+            errorMessage = "Please sign in to delete items"
+            showError = true
+            return
+        }
+
+        // Optimistically remove from UI
+        let uiItem = items.remove(at: index)
+
+        // Build the API model instance to delete (must include id; include _version if your schema has it)
+        var apiToDelete = uiItem.toAPIBucketItem()
+
         Task {
             do {
-                let result = try await Amplify.API.mutate(request: .delete(item))
-                // Handle result
+                // ✅ Correct overload: delete by passing the instance
+                let result = try await Amplify.API.mutate(request: .delete(apiToDelete))
+                switch result {
+                case .success:
+                    // Optionally refresh list here
+                    break
+                case .failure(let error):
+                    await MainActor.run {
+                        // Revert UI on backend failure
+                        self.items.insert(uiItem, at: min(index, self.items.count))
+                        self.errorMessage = "Failed to delete: \(error.localizedDescription)"
+                        self.showError = true
+                    }
+                }
             } catch {
                 await MainActor.run {
-                    // Revert on error
-                    self.items.insert(item, at: index)
-                    self.errorMessage = "Failed to delete item: \(error.localizedDescription)"
+                    // Revert UI on transport error
+                    self.items.insert(uiItem, at: min(index, self.items.count))
+                    self.errorMessage = "Failed to delete: \(error.localizedDescription)"
                     self.showError = true
                 }
             }
         }
-        */
     }
     
     private func clearInputs() {
@@ -586,17 +523,11 @@ struct BucketItemRow: View {
     @EnvironmentObject var themeManager: ThemeManager
     @State private var isHovered = false
     
-    private var cardBackgroundColor: Color {
-        themeManager.cardBackgroundColor
-    }
-    
-    private var textColor: Color {
-        themeManager.textColor
-    }
+    private var cardBackgroundColor: Color { themeManager.cardBackgroundColor }
+    private var textColor: Color { themeManager.textColor }
 
     var body: some View {
         HStack(alignment: .top, spacing: 16) {
-            // Main content
             Button(action: onToggle) {
                 HStack(alignment: .top, spacing: 0) {
                     VStack(alignment: .leading, spacing: 12) {
@@ -608,17 +539,14 @@ struct BucketItemRow: View {
                             .multilineTextAlignment(.leading)
                             .frame(maxWidth: .infinity, alignment: .leading)
                         
-                        // Tags
                         if item.category != nil || item.date != nil || item.link != nil {
                             HStack(spacing: 8) {
                                 if let category = item.category {
                                     TagView(text: category, type: .category)
                                 }
-                                
                                 if let date = item.date {
                                     TagView(text: "📅 \(date.formatted(date: .abbreviated, time: .omitted))", type: .date)
                                 }
-                                
                                 if let link = item.link, let url = URL(string: link) {
                                     Link(destination: url) {
                                         TagView(text: "🔗 Link", type: .link)
@@ -633,7 +561,6 @@ struct BucketItemRow: View {
             }
             .buttonStyle(PlainButtonStyle())
             
-            // Delete button
             Button(action: onDelete) {
                 Image(systemName: "xmark")
                     .font(.system(size: 16, weight: .medium))
@@ -646,9 +573,7 @@ struct BucketItemRow: View {
                     )
             }
             .buttonStyle(PlainButtonStyle())
-            .onHover { hovering in
-                isHovered = hovering
-            }
+            .onHover { isHovered = $0 }
         }
         .padding(24)
         .background(cardBackgroundColor)
@@ -664,28 +589,20 @@ struct BucketItemRow: View {
 struct TagView: View {
     let text: String
     let type: TagType
-    
     @EnvironmentObject var themeManager: ThemeManager
     
-    enum TagType {
-        case category, date, link
-    }
+    enum TagType { case category, date, link }
     
     private var backgroundColor: Color {
         switch type {
-        case .category, .date:
-            return themeManager.cardBackgroundColor
-        case .link:
-            return themeManager.accentColor.opacity(0.2)
+        case .category, .date: return themeManager.cardBackgroundColor
+        case .link: return themeManager.accentColor.opacity(0.2)
         }
     }
-    
     private var foregroundColor: Color {
         switch type {
-        case .category, .date:
-            return themeManager.textColor
-        case .link:
-            return themeManager.accentColor
+        case .category, .date: return themeManager.textColor
+        case .link: return themeManager.accentColor
         }
     }
 
@@ -699,12 +616,3 @@ struct TagView: View {
             .cornerRadius(16)
     }
 }
-
-// MARK: - Mock Data for Preview
-private let mockBucketItems: [BucketListItem] = [
-    BucketListItem(text: "Visit the Northern Lights", category: "Adventure", date: Calendar.current.date(byAdding: .year, value: 1, to: Date()), done: false),
-    BucketListItem(text: "Learn to play piano", category: "Growth", done: true),
-    BucketListItem(text: "Buy a house", category: "Need", link: "https://example.com", done: false)
-]
-
-

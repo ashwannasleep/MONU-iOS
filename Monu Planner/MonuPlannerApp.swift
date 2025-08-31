@@ -128,7 +128,9 @@ struct MonuPlannerApp: App {
                     .preferredColorScheme(themeManager.colorScheme)
                     .onAppear {
                         if !amplifyConfigured {
-                            configureAmplify()
+                            Task {
+                                await configureAmplify()
+                            }
                         }
                         
                         // Connect calendar sync manager to auth manager for user isolation
@@ -215,8 +217,16 @@ struct MonuPlannerApp: App {
                 return
             }
             
-            GIDSignIn.sharedInstance.configuration = GIDConfiguration(clientID: clientId)
-            print("✅ Google Sign-In configured with client ID")
+            // Use the same client ID as server client ID for iOS apps
+            let serverClientId = clientId
+            
+            GIDSignIn.sharedInstance.configuration = GIDConfiguration(
+                clientID: clientId,
+                serverClientID: serverClientId
+            )
+            print("✅ Google Sign-In configured with client ID and server client ID")
+            print("   - Client ID: \(clientId)")
+            print("   - Server Client ID: \(serverClientId)")
         } catch {
             print("❌ Error configuring Google Sign-In: \(error)")
         }
@@ -342,7 +352,7 @@ struct MonuPlannerApp: App {
             print("⚠️ Amplify already configured, skipping...")
             await MainActor.run {
                 amplifyConfigured = true
-                await authManager.checkAuthenticationStatus()
+                print("✅ Amplify configured successfully")
             }
             return
         }
@@ -392,9 +402,10 @@ struct MonuPlannerApp: App {
 
             await MainActor.run {
                 amplifyConfigured = true
-                await authManager.checkAuthenticationStatus()
                 print("✅ Amplify configured successfully")
             }
+            
+            await authManager.checkAuthenticationStatus()
 
         } catch {
             print("❌ Amplify configuration error: \(error)")
@@ -477,4 +488,3 @@ class NotificationHandler: NSObject, UNUserNotificationCenterDelegate {
         completionHandler([.banner, .sound, .badge])
     }
 }
-

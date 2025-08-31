@@ -6,6 +6,20 @@ private func temporalDateToString(_ date: Temporal.Date) -> String {
     return date.iso8601String
 }
 
+// MARK: - Day overlap helper used by all views
+fileprivate func eventsOn(_ date: Date, from all: [CalendarEvent]) -> [CalendarEvent] {
+    var cal = Calendar.current
+    cal.timeZone = .current                      // be explicit about TZ
+    let interval = cal.dateInterval(of: .day, for: date)
+        ?? DateInterval(start: cal.startOfDay(for: date),
+                        end: cal.date(byAdding: .day, value: 1, to: cal.startOfDay(for: date))!)
+
+    // Overlap if (start < dayEnd) && (end > dayStart)
+    return all
+        .filter { ev in ev.start < interval.end && ev.end > interval.start }
+        .sorted { $0.start < $1.start }
+}
+
 // MARK: - Calendar View Mode Enum
 enum CalendarViewMode: String, CaseIterable {
     case month = "Month"
@@ -274,7 +288,7 @@ struct MonthlyPlannerView: View {
             await MainActor.run {
                 // Only update if the data has actually changed
                 let newTasks = Array(result)
-                if self.dailyTasks.count != newTasks.count || 
+                if self.dailyTasks.count != newTasks.count ||
                    !self.dailyTasks.elementsEqual(newTasks, by: { $0.id == $1.id }) {
                     self.dailyTasks = newTasks
                     print("📋 Loaded \(result.count) daily tasks for calendar")
@@ -428,15 +442,8 @@ struct SimpleMonthCalendarView: View {
         return dates
     }
     
-
-    
     private func getEventsForDate(_ date: Date) -> [CalendarEvent] {
-        // Match events that overlap the day interval (start before day end AND end after day start)
-        let startOfDay = calendar.startOfDay(for: date)
-        guard let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay) else { return [] }
-        return events.filter { event in
-            (event.start < endOfDay) && ((event.end ?? event.start) >= startOfDay)
-        }.sorted { $0.start < $1.start }
+        eventsOn(date, from: events)
     }
     
     private func getTasksForDate(_ date: Date) -> [DailyTask] {
@@ -578,9 +585,7 @@ struct MonthCalendarView: View {
     }
     
     private func getEventsForDate(_ date: Date) -> [CalendarEvent] {
-        return events.filter { event in
-            calendar.isDate(event.start, inSameDayAs: date)
-        }
+        eventsOn(date, from: events)
     }
     
     private func getTasksForDate(_ date: Date) -> [DailyTask] {
@@ -850,9 +855,7 @@ struct WeekView: View {
     }
     
     private func getEventsForDate(_ date: Date) -> [CalendarEvent] {
-        return events.filter { event in
-            calendar.isDate(event.start, inSameDayAs: date)
-        }
+        eventsOn(date, from: events)
     }
     
     private func getTasksForDate(_ date: Date) -> [DailyTask] {
@@ -1087,9 +1090,7 @@ struct DayView: View {
     }
     
     private var dayEvents: [CalendarEvent] {
-        return events.filter { event in
-            calendar.isDate(event.start, inSameDayAs: currentDate)
-        }.sorted { $0.start < $1.start }
+        eventsOn(currentDate, from: events)
     }
     
     private var dayTasks: [DailyTask] {
@@ -1324,4 +1325,5 @@ struct DayCell: View {
             return .secondary
         }
     }
-} 
+}
+

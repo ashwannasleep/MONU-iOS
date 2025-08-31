@@ -1,11 +1,11 @@
 import SwiftUI
 import Amplify
 import AWSCognitoAuthPlugin
-import GoogleSignIn
 
 struct AuthModal: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject var themeManager: ThemeManager
+
     @State private var mode: AuthMode
     @State private var email = ""
     @State private var password = ""
@@ -14,18 +14,18 @@ struct AuthModal: View {
     @State private var newPassword = ""
     @State private var message = ""
     @State private var loading = false
-    
+
     let onSignIn: (String, String) -> Void
     let onSignUp: (String, String, String) -> Void
     let onClose: () -> Void
-    
+
     enum AuthMode: String, CaseIterable {
         case signIn = "Sign In"
         case signUp = "Sign Up"
         case forgotPassword = "Forgot Password"
         case resetPassword = "Reset Password"
     }
-    
+
     init(
         initialMode: AuthMode = .signIn,
         onSignIn: @escaping (String, String) -> Void,
@@ -37,108 +37,53 @@ struct AuthModal: View {
         self.onSignUp = onSignUp
         self.onClose = onClose
     }
-    
+
     var body: some View {
         ZStack {
-            // Overlay background
             Color.black.opacity(0.2)
                 .ignoresSafeArea()
-                .onTapGesture {
-                    dismiss()
-                    onClose()
-                }
-            
-            // Modal content
+                .onTapGesture { dismiss(); onClose() }
+
             modalContent
-                .background(themeManager.colorScheme == .dark ? Color(red:0.18,green:0.18,blue:0.18) : Color(red: 0.97, green: 0.96, blue: 0.94)) // #f7f5ef
+                .background(themeManager.colorScheme == .dark
+                            ? Color(red: 0.18, green: 0.18, blue: 0.18)
+                            : Color(red: 0.97, green: 0.96, blue: 0.94))
                 .cornerRadius(32)
                 .shadow(color: Color.black.opacity(0.1), radius: 25, x: 0, y: 25)
                 .padding(.horizontal, 16)
-                .scaleEffect(1.0)
                 .animation(.easeOut(duration: 0.25), value: mode)
         }
-        .onChange(of: mode) { oldValue, newValue in
-            message = ""
-        }
+        .onChange(of: mode) { _ in message = "" }
     }
-    
+
     private var modalContent: some View {
         VStack(spacing: 0) {
-            // Header with close button
             HStack {
                 Spacer()
-                Button("×") {
-                    dismiss()
-                    onClose()
-                }
-                .font(.title2)
-                .foregroundColor(themeManager.colorScheme == .dark ? .white : Color(red: 0.27, green: 0.27, blue: 0.27))
-                .background(Color.clear)
-                .padding(.top, 12)
-                .padding(.trailing, 12)
+                Button("×") { dismiss(); onClose() }
+                    .font(.title2)
+                    .foregroundColor(themeManager.colorScheme == .dark ? .white : Color(red: 0.27, green: 0.27, blue: 0.27))
+                    .padding(.top, 12)
+                    .padding(.trailing, 12)
             }
-            
-            // Title
+
             Text(mode.rawValue)
                 .font(.custom("Georgia", size: 20))
                 .fontWeight(.semibold)
                 .foregroundColor(themeManager.colorScheme == .dark ? .white : Color(red: 0.18, green: 0.18, blue: 0.18))
                 .padding(.bottom, 20)
                 .padding(.top, -4)
-            
-            // Form content
+
             VStack(spacing: 12) {
                 formContent
-                
-                // Google Sign-In button (for sign in mode)
-                if mode == .signIn {
-                    VStack(spacing: 12) {
-                        HStack {
-                            Rectangle()
-                                .frame(height: 1)
-                                .foregroundColor(.secondary.opacity(0.3))
-                            Text("or")
-                                .font(.custom("Georgia", size: 12))
-                                .foregroundColor(.secondary)
-                            Rectangle()
-                                .frame(height: 1)
-                                .foregroundColor(.secondary.opacity(0.3))
-                        }
-                        
-                        Button(action: handleGoogleSignIn) {
-                            HStack(spacing: 8) {
-                                Image(systemName: "globe")
-                                    .font(.system(size: 16))
-                                Text("Continue with Google")
-                                    .font(.custom("Georgia", size: 16))
-                                    .fontWeight(.medium)
-                            }
-                            .foregroundColor(themeManager.colorScheme == .dark ? .white : .black)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 12)
-                            .background(themeManager.colorScheme == .dark ? Color(red: 0.2, green: 0.2, blue: 0.2) : Color.white)
-                            .cornerRadius(8)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 8)
-                                    .stroke(Color.secondary.opacity(0.3), lineWidth: 1)
-                            )
-                        }
-                        .disabled(loading)
-                    }
-                    .padding(.top, 8)
-                }
-                
-                // Submit button (when applicable)
+
                 if shouldShowSubmitButton {
-                    AuthButton(
-                        title: submitButtonTitle,
-                        loading: loading,
-                        action: handleSubmit
-                    )
-                    .padding(.top, 4)
+                    AuthButton(title: submitButtonTitle, loading: loading, action: handleSubmit)
+                        .opacity(isSubmitDisabled ? 0.6 : 1)
+                        .disabled(loading || isSubmitDisabled)
+                        .padding(.top, 4)
                 }
-                
-                // Toggle links
+
                 VStack(spacing: 6) {
                     if mode == .signIn {
                         Button("Forgot Password?") {
@@ -147,22 +92,21 @@ struct AuthModal: View {
                         }
                         .authLinkStyle()
                     }
-                    
+
                     HStack {
                         Text(mode == .signIn ? "Don't have an account?" : "Already have an account?")
                             .font(.custom("Georgia", size: 14))
                             .foregroundColor(themeManager.colorScheme == .dark ? .white : Color(red: 0.23, green: 0.23, blue: 0.23))
-                        
+
                         Button(mode == .signIn ? "Sign Up" : "Sign In") {
                             resetAll()
-                            mode = mode == .signIn ? .signUp : .signIn
+                            mode = (mode == .signIn ? .signUp : .signIn)
                         }
                         .authLinkStyle()
                     }
                 }
                 .padding(.top, 8)
-                
-                // Message display
+
                 if !message.isEmpty {
                     Text(message)
                         .font(.custom("Georgia", size: 13))
@@ -178,38 +122,19 @@ struct AuthModal: View {
         .frame(maxWidth: 360)
         .frame(minWidth: 280)
     }
-    
+
     @ViewBuilder
     private var formContent: some View {
         VStack(spacing: 12) {
-            // Name field for sign up
             if mode == .signUp {
-                AuthTextField(
-                    placeholder: "Name",
-                    text: $fullName,
-                    keyboardType: .default
-                )
+                AuthTextField(placeholder: "Name", text: $fullName, keyboardType: .default)
             }
-            
-            // Email field (not shown in reset password mode)
             if mode != .resetPassword {
-                AuthTextField(
-                    placeholder: "Email",
-                    text: $email,
-                    keyboardType: .emailAddress
-                )
+                AuthTextField(placeholder: "Email", text: $email, keyboardType: .emailAddress)
             }
-            
-            // Password field for sign in/sign up
             if mode == .signIn || mode == .signUp {
-                AuthTextField(
-                    placeholder: "Password",
-                    text: $password,
-                    isSecure: true
-                )
+                AuthTextField(placeholder: "Password", text: $password, isSecure: true)
             }
-            
-            // Forgot password info and button
             if mode == .forgotPassword {
                 Text("We'll send a reset code to your email.")
                     .font(.custom("Georgia", size: 14))
@@ -217,15 +142,15 @@ struct AuthModal: View {
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 8)
-                
+
                 AuthButton(
                     title: loading ? "Sending…" : "Send Code",
                     loading: loading,
                     action: handleSendCode
                 )
+                .disabled(loading || emailTrimmed.isEmpty)
+                .opacity((loading || emailTrimmed.isEmpty) ? 0.6 : 1)
             }
-            
-            // Reset password fields
             if mode == .resetPassword {
                 Text("Enter the code sent to \(email) and your new password:")
                     .font(.custom("Georgia", size: 14))
@@ -233,66 +158,59 @@ struct AuthModal: View {
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 8)
-                
-                AuthTextField(
-                    placeholder: "Reset Code",
-                    text: $resetCode,
-                    keyboardType: .default
-                )
-                
-                AuthTextField(
-                    placeholder: "New Password",
-                    text: $newPassword,
-                    isSecure: true
-                )
+
+                AuthTextField(placeholder: "Reset Code", text: $resetCode, keyboardType: .default)
+                AuthTextField(placeholder: "New Password", text: $newPassword, isSecure: true)
             }
         }
     }
-    
+
+    // MARK: - Computed
     private var shouldShowSubmitButton: Bool {
         mode == .signIn || mode == .signUp || mode == .resetPassword
     }
-    
+
     private var submitButtonTitle: String {
-        if loading {
-            return "Please wait…"
+        if loading { return "Please wait…" }
+        switch mode {
+        case .signIn: return "Sign In"
+        case .signUp: return "Sign Up"
+        case .resetPassword: return "Reset Password"
+        case .forgotPassword: return ""
         }
-        
+    }
+
+    private var isSubmitDisabled: Bool {
         switch mode {
         case .signIn:
-            return "Sign In"
+            return emailTrimmed.isEmpty || password.isEmpty
         case .signUp:
-            return "Sign Up"
+            return emailTrimmed.isEmpty || password.isEmpty
         case .resetPassword:
-            return "Reset Password"
+            return emailTrimmed.isEmpty
+                || resetCode.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                || newPassword.isEmpty
         case .forgotPassword:
-            return "" // Handled separately
+            return true
         }
     }
-    
+
+    private var emailTrimmed: String { email.trimmingCharacters(in: .whitespacesAndNewlines) }
+
     private func resetAll() {
-        email = ""
-        password = ""
-        fullName = ""
-        resetCode = ""
-        newPassword = ""
-        message = ""
+        email = ""; password = ""; fullName = ""; resetCode = ""; newPassword = ""; message = ""
     }
-    
+
+    // MARK: - Actions
     private func handleSendCode() {
-        guard !email.isEmpty else {
+        guard !emailTrimmed.isEmpty else {
             message = "Please enter your email address"
             return
         }
-        
         Task {
-            await MainActor.run {
-                loading = true
-                message = ""
-            }
-            
+            await MainActor.run { loading = true; message = "" }
             do {
-                let _ = try await Amplify.Auth.resetPassword(for: email.trimmingCharacters(in: .whitespacesAndNewlines))
+                _ = try await Amplify.Auth.resetPassword(for: emailTrimmed)
                 await MainActor.run {
                     mode = .resetPassword
                     message = "Code sent! Check your email."
@@ -300,164 +218,165 @@ struct AuthModal: View {
                 }
             } catch {
                 await MainActor.run {
-                    message = error.localizedDescription
+                    message = messageForAuthError(error, context: .forgotPassword)
                     loading = false
                 }
             }
         }
     }
-    
+
     private func handleSubmit() {
-        Task {
-            await MainActor.run {
-                loading = true
-                message = ""
-            }
-            
-            do {
-                switch mode {
-                case .signIn:
+        Task { await performSubmit() }
+    }
+
+    private func performSubmit() async {
+        await MainActor.run { loading = true; message = "" }
+        do {
+            switch mode {
+            case .signIn:
+                let res = try await Amplify.Auth.signIn(username: emailTrimmed, password: password)
+                if res.isSignedIn {
+                    UserDefaults.standard.set(emailTrimmed, forKey: "user_email")
                     await MainActor.run {
                         loading = false
-                        onSignIn(email.trimmingCharacters(in: .whitespacesAndNewlines), password)
-                        dismiss()
-                        onClose()
+                        onSignIn(emailTrimmed, password)
+                        dismiss(); onClose()
                     }
-                    
-                case .signUp:
+                } else {
                     await MainActor.run {
                         loading = false
-                        onSignUp(
-                            email.trimmingCharacters(in: .whitespacesAndNewlines),
-                            password,
-                            fullName.trimmingCharacters(in: .whitespacesAndNewlines)
-                        )
-                        dismiss()
-                        onClose()
-                    }
-                    
-                case .forgotPassword:
-                    let _ = try await Amplify.Auth.resetPassword(for: email.trimmingCharacters(in: .whitespacesAndNewlines))
-                    await MainActor.run {
-                        message = "Code sent! Check your email."
-                        mode = .resetPassword
-                        loading = false
-                    }
-                    
-                case .resetPassword:
-                    let _ = try await Amplify.Auth.confirmResetPassword(
-                        for: email.trimmingCharacters(in: .whitespacesAndNewlines),
-                        with: newPassword,
-                        confirmationCode: resetCode.trimmingCharacters(in: .whitespacesAndNewlines)
-                    )
-                    await MainActor.run {
-                        message = "Password reset successfully! You can now sign in."
-                        mode = .signIn
-                        password = ""
-                        newPassword = ""
-                        resetCode = ""
-                        loading = false
+                        message = "Sign in not completed. Please try again."
                     }
                 }
-            } catch {
+
+            case .signUp:
+                var attrs: [AuthUserAttribute] = [AuthUserAttribute(.email, value: emailTrimmed)]
+                let trimmedName = fullName.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !trimmedName.isEmpty { attrs.append(AuthUserAttribute(.name, value: trimmedName)) }
+
+                let options = AuthSignUpRequest.Options(userAttributes: attrs)
+                let signUpRes = try await Amplify.Auth.signUp(
+                    username: emailTrimmed,
+                    password: password,
+                    options: options
+                )
+
+                if !trimmedName.isEmpty { UserDefaults.standard.set(trimmedName, forKey: "monu_name") }
+                UserDefaults.standard.set(emailTrimmed, forKey: "user_email")
+
+                switch signUpRes.nextStep {
+                case .confirmUser: // destination type varies by SDK; don't pattern-match fields
+                    await MainActor.run {
+                        loading = false
+                        message = "We sent a verification code. Check your inbox or SMS and enter it to finish sign up."
+                    }
+
+                case .done:
+                    let signInRes = try await Amplify.Auth.signIn(username: emailTrimmed, password: password)
+                    await MainActor.run {
+                        loading = false
+                        if signInRes.isSignedIn {
+                            onSignUp(emailTrimmed, password, trimmedName)
+                            dismiss(); onClose()
+                        } else {
+                            message = "Account created. Please sign in."
+                            mode = .signIn
+                        }
+                    }
+
+                @unknown default:
+                    await MainActor.run {
+                        loading = false
+                        message = "Check your email for a verification code to complete sign up."
+                    }
+                }
+
+            case .forgotPassword:
+                break // handled in handleSendCode()
+
+            case .resetPassword:
+                _ = try await Amplify.Auth.confirmResetPassword(
+                    for: emailTrimmed,
+                    with: newPassword,
+                    confirmationCode: resetCode.trimmingCharacters(in: .whitespacesAndNewlines)
+                )
                 await MainActor.run {
-                    message = error.localizedDescription
+                    message = "Password reset successfully! You can now sign in."
+                    mode = .signIn
+                    password = ""; newPassword = ""; resetCode = ""
                     loading = false
                 }
+            }
+        } catch {
+            await MainActor.run {
+                message = messageForAuthError(error, context: mode)
+                loading = false
             }
         }
     }
-    
-    // MARK: - Google Sign-In
-    private func handleGoogleSignIn() {
-        Task {
-            await MainActor.run {
-                loading = true
-                message = ""
-            }
-            
-            do {
-                guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-                      let window = windowScene.windows.first else {
-                    await MainActor.run {
-                        message = "Unable to present Google Sign-In"
-                        loading = false
-                    }
-                    return
+
+    // MARK: - Error mapping
+    private func messageForAuthError(_ error: Error, context: AuthMode) -> String {
+        if let authError = error as? AuthError {
+            switch authError {
+            case .service(let message, let suggestion, let underlying):
+                let full = [message, suggestion, underlying?.localizedDescription].compactMap { $0 }.joined(separator: " ")
+                if full.localizedCaseInsensitiveContains("UsernameExistsException") {
+                    return "An account with that email already exists. Try signing in."
                 }
-                
-                let result = try await GIDSignIn.sharedInstance.signIn(withPresenting: window.rootViewController!)
-                
-                let user = result.user
-                guard let idToken = user.idToken?.tokenString else {
-                    await MainActor.run {
-                        message = "Failed to get user token from Google"
-                        loading = false
-                    }
-                    return
+                if full.localizedCaseInsensitiveContains("UserNotFoundException") {
+                    return "No account found for that email. Double-check it or sign up."
                 }
-                
-                // Sign in to Amplify with Google token
-                let amplifyResult = try await Amplify.Auth.signInWithWebUI(for: .google)
-                
-                // Save the user's name and email
-                if let userName = user.profile?.name {
-                    UserDefaults.standard.set(userName, forKey: "monu_name")
+                if full.localizedCaseInsensitiveContains("NotAuthorizedException")
+                    || full.localizedCaseInsensitiveContains("incorrect username or password") {
+                    return "Incorrect email or password. Try again or reset your password."
                 }
-                if let userEmail = user.profile?.email {
-                    UserDefaults.standard.set(userEmail, forKey: "user_email")
+                if full.localizedCaseInsensitiveContains("UserNotConfirmedException") {
+                    return "Your email isn’t confirmed yet. Check your inbox for the verification code."
                 }
-                
-                await MainActor.run {
-                    loading = false
-                    message = "Successfully signed in with Google!"
-                    dismiss()
-                    onClose()
-                }
-                
-            } catch {
-                await MainActor.run {
-                    message = "Google Sign-In failed: \(error.localizedDescription)"
-                    loading = false
-                }
+                return message.isEmpty ? "Something went wrong. Please try again." : message
+
+            case .invalidState:
+                return "Something went wrong with the current auth state. Please try again."
+            case .notAuthorized:
+                return "Incorrect email or password. Try again or reset your password."
+            default:
+                return authError.errorDescription
             }
         }
+        return error.localizedDescription.isEmpty ? "Unexpected error. Please try again." : error.localizedDescription
     }
 }
 
-// MARK: - Auth Text Field Component
+// MARK: - Auth Text Field
 struct AuthTextField: View {
     let placeholder: String
     @Binding var text: String
     var keyboardType: AuthKeyboardType = .default
     var isSecure: Bool = false
-    
-    enum AuthKeyboardType {
-        case `default`
-        case emailAddress
-    }
-    
+
+    enum AuthKeyboardType { case `default`, emailAddress }
+
     @EnvironmentObject var themeManager: ThemeManager
-    
+
     var body: some View {
         textFieldView
             .font(.custom("Georgia", size: 15))
             .padding(.horizontal, 16)
             .padding(.vertical, 10)
-            .background(themeManager.colorScheme == .dark ? Color(red:0.18,green:0.18,blue:0.18) : Color.white)
+            .background(themeManager.colorScheme == .dark ? Color(red: 0.18, green: 0.18, blue: 0.18) : Color.white)
             .cornerRadius(20)
             .overlay(
                 RoundedRectangle(cornerRadius: 20)
-                    .stroke(Color(red: 0.84, green: 0.83, blue: 0.8), lineWidth: 2) // #d6d3cd
+                    .stroke(Color(red: 0.84, green: 0.83, blue: 0.8), lineWidth: 2)
             )
             .shadow(color: .black.opacity(0.04), radius: 2, x: 0, y: 2)
     }
-    
+
     @ViewBuilder
     private var textFieldView: some View {
         if isSecure {
-            SecureField(placeholder, text: $text)
-                .disableAutocorrection(true)
+            SecureField(placeholder, text: $text).disableAutocorrection(true)
         } else {
             TextField(placeholder, text: $text)
                 .disableAutocorrection(true)
@@ -466,26 +385,24 @@ struct AuthTextField: View {
             #endif
         }
     }
-    
+
     #if canImport(UIKit)
     private var uiKeyboardType: UIKeyboardType {
         switch keyboardType {
-        case .default:
-            return .default
-        case .emailAddress:
-            return .emailAddress
+        case .default: return .default
+        case .emailAddress: return .emailAddress
         }
     }
     #endif
 }
 
-// MARK: - Auth Button Component
+// MARK: - Auth Button
 struct AuthButton: View {
     let title: String
     let loading: Bool
     let action: () -> Void
     @EnvironmentObject var themeManager: ThemeManager
-    
+
     var body: some View {
         Button(action: action) {
             Text(title)
@@ -496,7 +413,7 @@ struct AuthButton: View {
                 .frame(minHeight: 40)
                 .padding(.horizontal, 24)
                 .padding(.vertical, 10)
-                .background(Color(red: 0.78, green: 0.75, blue: 0.7)) // #c7bfb2
+                .background(Color(red: 0.78, green: 0.75, blue: 0.7))
                 .cornerRadius(20)
         }
         .disabled(loading)
@@ -514,7 +431,7 @@ struct AuthButtonStyle: ButtonStyle {
     }
 }
 
-// MARK: - Link Style Extension
+// MARK: - Link Style
 extension Button {
     func authLinkStyle() -> some View {
         self
@@ -525,19 +442,14 @@ extension Button {
     }
 }
 
-
 // MARK: - Preview
 #Preview {
     AuthModal(
         initialMode: .signIn,
-        onSignIn: { email, password in
-            print("Sign in: \(email)")
-        },
-        onSignUp: { email, password, name in
-            print("Sign up: \(email), \(name)")
-        },
-        onClose: {
-            print("Modal closed")
-        }
+        onSignIn: { email, _ in print("Sign in: \(email)") },
+        onSignUp: { email, _, name in print("Sign up: \(email), \(name)") },
+        onClose: { print("Modal closed") }
     )
+    .environmentObject(ThemeManager.shared)
 }
+

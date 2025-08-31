@@ -25,9 +25,7 @@ struct ContentView: View {
                                             try await Amplify.Auth.signIn(username: email, password: password)
                                             // Store the email for display in settings
                                             UserDefaults.standard.set(email, forKey: "user_email")
-                                            await MainActor.run {
-                                                await authManager.checkAuthenticationStatus()
-                                            }
+                                            await authManager.checkAuthenticationStatus()
                                         } catch {
                                             print("❌ Sign in failed: \(error)")
                                         }

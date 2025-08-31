@@ -1,6 +1,7 @@
 import SwiftUI
 import Amplify
 
+// MARK: - DateFormatter
 extension DateFormatter {
     static let yyyyMMdd: DateFormatter = {
         let formatter = DateFormatter()
@@ -9,6 +10,7 @@ extension DateFormatter {
     }()
 }
 
+// MARK: - Dashboard View
 struct DashboardView: View {
     @State private var bucketProgress: Int = 0
     @State private var dailyProgress: Int = 0
@@ -16,115 +18,109 @@ struct DashboardView: View {
     @State private var futureProgress: Int = 0
     @State private var loading: Bool = false
     @State private var error: String?
-    @State private var isRefreshing: Bool = false
-    @State private var scrollOffset: CGFloat = 0
-    
+
+    // anchor id for scrolling to top
+    private let topAnchor = "dashboard-top-anchor"
+
     @EnvironmentObject var themeManager: ThemeManager
     @EnvironmentObject var navigationManager: NavigationContainer.NavigationManager
     @EnvironmentObject var authManager: AuthenticationManager
-    
+
     var body: some View {
         ZStack {
-            themeManager.backgroundColor
-                .ignoresSafeArea()
-            
-            ScrollViewReader(scrollOffset: $scrollOffset) { _ in
-                VStack(spacing: 0) {
-                    // Header
-                    header
-                    
-                    // Error Alert
-                    if let error = error {
-                        Text(error)
-                            .font(.system(size: 13, design: .serif))
-                            .foregroundColor(.red)
-                            .padding(.horizontal, 20)
-                            .padding(.vertical, 12)
-                            .background(themeManager.colorScheme == .dark ? Color.red.opacity(0.15) : Color.red.opacity(0.08))
-                            .cornerRadius(10)
-                            .padding(.horizontal, 24)
-                            .padding(.bottom, 20)
-                    }
-                    
-                    // Progress Cards - Horizontal Row
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 16) {
-                            DashboardCard(
-                                title: "Today Tasks",
-                                progress: dailyProgress,
-                                progressColor: themeManager.accentColor
-                            )
-                            
-                            DashboardCard(
-                                title: "Yearly Goals",
-                                progress: yearlyProgress,
-                                progressColor: themeManager.accentColor
-                            )
-                            
-                            DashboardCard(
-                                title: "Bucket List",
-                                progress: bucketProgress,
-                                progressColor: themeManager.accentColor
-                            )
-                            
-                            DashboardCard(
-                                title: "Future Vision",
-                                progress: futureProgress,
-                                progressColor: themeManager.accentColor
-                            )
+            themeManager.backgroundColor.ignoresSafeArea()
+
+            SwiftUI.ScrollViewReader { proxy in
+                ScrollView {
+                    // Invisible top anchor
+                    Color.clear
+                        .frame(height: 1)
+                        .id(topAnchor)
+
+                    VStack(spacing: 0) {
+                        // Header
+                        header
+
+                        // Error Alert
+                        if let error = error {
+                            Text(error)
+                                .font(.system(size: 13, design: .serif))
+                                .foregroundColor(.red)
+                                .padding(.horizontal, 20)
+                                .padding(.vertical, 12)
+                                .background(themeManager.colorScheme == .dark ? Color.red.opacity(0.15) : Color.red.opacity(0.08))
+                                .cornerRadius(10)
+                                .padding(.horizontal, 24)
+                                .padding(.bottom, 20)
                         }
-                        .padding(.horizontal, 24)
+
+                        // Progress Cards - Horizontal Row
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 16) {
+                                DashboardCard(
+                                    title: "Today Tasks",
+                                    progress: dailyProgress,
+                                    progressColor: themeManager.accentColor
+                                )
+                                DashboardCard(
+                                    title: "Yearly Goals",
+                                    progress: yearlyProgress,
+                                    progressColor: themeManager.accentColor
+                                )
+                                DashboardCard(
+                                    title: "Bucket List",
+                                    progress: bucketProgress,
+                                    progressColor: themeManager.accentColor
+                                )
+                                DashboardCard(
+                                    title: "Future Vision",
+                                    progress: futureProgress,
+                                    progressColor: themeManager.accentColor
+                                )
+                            }
+                            .padding(.horizontal, 24)
+                        }
+                        .padding(.bottom, 32)
+
+                        // Focus Card
+                        FocusCardView()
+                            .padding(.horizontal, 24)
+                            .padding(.bottom, 24)
+
+                        // Weekly Tasks Pie (Finished / Unfinished / Expired)
+                        WeeklyTasksPieCard()
+                            .padding(.horizontal, 24)
+                            .padding(.bottom, 24)
+
+                        // Optional: time allocation card
+                        TimeAllocationTrackerCard()
+                            .padding(.horizontal, 24)
+                            .padding(.bottom, 100)
                     }
-                    .padding(.bottom, 32)
-                    
-                    // Focus Card
-                    FocusCardView()
-                        .padding(.horizontal, 24)
-                        .padding(.bottom, 24)
-                     
-                    // Weekly Tasks Pie (Finished / Unfinished / Expired)
-                    WeeklyTasksPieCard()
-                        .padding(.horizontal, 24)
-                        .padding(.bottom, 24)
-                    
-                    // AI Insights Section
-                    AIInsightsSection()
-                        .padding(.horizontal, 24)
-                        .padding(.bottom, 40)
                 }
-            }
-            
-            // Back to Top Button
-            VStack {
-                Spacer()
-                HStack {
-                    Spacer()
-                    BackToTopButton(scrollOffset: $scrollOffset) {
+                .overlay(alignment: .bottomTrailing) {
+                    BackToTopFAB {
                         withAnimation(.easeInOut(duration: 0.5)) {
-                            scrollOffset = 0
+                            proxy.scrollTo(topAnchor, anchor: UnitPoint.top)
                         }
                     }
                     .padding(.trailing, 24)
-                    .padding(.bottom, 100)
+                    .padding(.bottom, 24)
+                }
+                .onAppear {
+                    Task { await loadData() }
+                }
+                .onChange(of: authManager.isAuthenticated) { isAuthenticated in
+                    if isAuthenticated {
+                        Task { await loadData() }
+                    }
                 }
             }
         }
         .navigationBarHidden(true)
-        .onAppear {
-            Task {
-                await loadData()
-            }
-        }
-        .onChange(of: authManager.isAuthenticated) { isAuthenticated in
-            if isAuthenticated {
-                Task {
-                    await loadData()
-                }
-            }
-        }
         .navigationBarBackButtonHidden(true)
     }
-    
+
     // MARK: - Header View
     private var header: some View {
         VStack(spacing: 0) {
@@ -137,7 +133,7 @@ struct DashboardView: View {
             .buttonStyle(.plain)
             .padding(.top, 48)
             .padding(.bottom, 8)
-            
+
             Text("Track your progress and achievements")
                 .font(.custom("Georgia", size: 16))
                 .italic()
@@ -147,19 +143,19 @@ struct DashboardView: View {
                 .padding(.bottom, 32)
         }
     }
-    
+
     // MARK: - Data Loading
     private func loadData() async {
         loading = true
         error = nil
-        
-        // Wait for authentication to be ready
+
+        // Wait briefly for auth to settle
         var attempts = 0
         while !authManager.isAuthenticated && attempts < 10 {
-            try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+            try? await Task.sleep(nanoseconds: 500_000_000) // 0.5s
             attempts += 1
         }
-        
+
         guard authManager.isAuthenticated else {
             await MainActor.run {
                 self.error = "Please sign in to view dashboard"
@@ -167,23 +163,20 @@ struct DashboardView: View {
             }
             return
         }
-        
+
         await withTaskGroup(of: Void.self) { group in
             group.addTask { await fetchBucket() }
             group.addTask { await fetchDaily() }
             group.addTask { await fetchYearly() }
             group.addTask { await fetchFuture() }
         }
-        
-        await MainActor.run {
-            loading = false
-        }
+
+        await MainActor.run { loading = false }
     }
-    
-    // MARK: - Data Fetching Functions
+
+    // MARK: - Data Fetching
     private func fetchBucket() async {
         guard authManager.isAuthenticated else { return }
-        
         do {
             let result = try await Amplify.API.query(request: .list(BucketItem.self))
             switch result {
@@ -191,120 +184,80 @@ struct DashboardView: View {
                 let completedItems = items.filter { $0.done == true }.count
                 let totalItems = items.count
                 let progress = totalItems > 0 ? Int((Double(completedItems) / Double(totalItems)) * 100) : 0
-                
                 await MainActor.run {
                     self.bucketProgress = progress
-                    // Clear any previous errors if this succeeds
-                    if self.error?.contains("bucket") == true {
-                        self.error = nil
-                    }
+                    if self.error?.contains("bucket") == true { self.error = nil }
                 }
             case .failure(let error):
-                await MainActor.run {
-                    self.error = "Failed to load bucket list: \(error.localizedDescription)"
-                }
+                await MainActor.run { self.error = "Failed to load bucket list: \(error.localizedDescription)" }
             }
         } catch {
-            await MainActor.run {
-                self.error = "Failed to load bucket list: \(error.localizedDescription)"
-            }
+            await MainActor.run { self.error = "Failed to load bucket list: \(error.localizedDescription)" }
         }
     }
-    
+
     private func fetchDaily() async {
         guard authManager.isAuthenticated else { return }
-        
         do {
             let today = DateFormatter.yyyyMMdd.string(from: Date())
             let result = try await Amplify.API.query(request: .list(DailyTask.self))
             switch result {
             case .success(let tasks):
-                // Filter tasks for today
-                let todayTasks = tasks.filter { task in
-                    let taskDateString = task.date.iso8601String.prefix(10)
-                    return String(taskDateString) == today
-                }
-                
+                let todayTasks = tasks.filter { String($0.date.iso8601String.prefix(10)) == today }
                 let completedTasks = todayTasks.filter { $0.done == true }.count
                 let totalTasks = todayTasks.count
                 let progress = totalTasks > 0 ? Int((Double(completedTasks) / Double(totalTasks)) * 100) : 0
-                
                 await MainActor.run {
                     self.dailyProgress = progress
-                    // Clear any previous errors if this succeeds
-                    if self.error?.contains("daily") == true {
-                        self.error = nil
-                    }
+                    if self.error?.contains("daily") == true { self.error = nil }
                 }
             case .failure(let error):
-                await MainActor.run {
-                    self.error = "Failed to load daily tasks: \(error.localizedDescription)"
-                }
+                await MainActor.run { self.error = "Failed to load daily tasks: \(error.localizedDescription)" }
             }
         } catch {
-            await MainActor.run {
-                self.error = "Failed to load daily tasks: \(error.localizedDescription)"
-            }
+            await MainActor.run { self.error = "Failed to load daily tasks: \(error.localizedDescription)" }
         }
     }
-    
+
     private func fetchYearly() async {
         guard authManager.isAuthenticated else { return }
-        
         do {
             let result = try await Amplify.API.query(request: .list(YearlyGoal.self))
             switch result {
             case .success(let goals):
-                let completedGoals = goals.filter { $0.done == true }.count
-                let totalGoals = goals.count
-                let progress = totalGoals > 0 ? Int((Double(completedGoals) / Double(totalGoals)) * 100) : 0
-                
+                let completed = goals.filter { $0.done == true }.count
+                let total = goals.count
+                let progress = total > 0 ? Int((Double(completed) / Double(total)) * 100) : 0
                 await MainActor.run {
                     self.yearlyProgress = progress
-                    // Clear any previous errors if this succeeds
-                    if self.error?.contains("yearly") == true {
-                        self.error = nil
-                    }
+                    if self.error?.contains("yearly") == true { self.error = nil }
                 }
             case .failure(let error):
-                await MainActor.run {
-                    self.error = "Failed to load yearly goals: \(error.localizedDescription)"
-                }
+                await MainActor.run { self.error = "Failed to load yearly goals: \(error.localizedDescription)" }
             }
         } catch {
-            await MainActor.run {
-                self.error = "Failed to load yearly goals: \(error.localizedDescription)"
-            }
+            await MainActor.run { self.error = "Failed to load yearly goals: \(error.localizedDescription)" }
         }
     }
-    
+
     private func fetchFuture() async {
         guard authManager.isAuthenticated else { return }
-        
         do {
             let result = try await Amplify.API.query(request: .list(FutureGoal.self))
             switch result {
             case .success(let goals):
-                let completedGoals = goals.filter { $0.done == true }.count
-                let totalGoals = goals.count
-                let progress = totalGoals > 0 ? Int((Double(completedGoals) / Double(totalGoals)) * 100) : 0
-                
+                let completed = goals.filter { $0.done == true }.count
+                let total = goals.count
+                let progress = total > 0 ? Int((Double(completed) / Double(total)) * 100) : 0
                 await MainActor.run {
                     self.futureProgress = progress
-                    // Clear any previous errors if this succeeds
-                    if self.error?.contains("future") == true {
-                        self.error = nil
-                    }
+                    if self.error?.contains("future") == true { self.error = nil }
                 }
             case .failure(let error):
-                await MainActor.run {
-                    self.error = "Failed to load future goals: \(error.localizedDescription)"
-                }
+                await MainActor.run { self.error = "Failed to load future goals: \(error.localizedDescription)" }
             }
         } catch {
-            await MainActor.run {
-                self.error = "Failed to load future goals: \(error.localizedDescription)"
-            }
+            await MainActor.run { self.error = "Failed to load future goals: \(error.localizedDescription)" }
         }
     }
 }
@@ -314,28 +267,28 @@ struct DashboardCard: View {
     let title: String
     let progress: Int
     let progressColor: Color
-    
+
     @EnvironmentObject var themeManager: ThemeManager
-    
+
     var body: some View {
         VStack(spacing: 12) {
             Text(title)
                 .font(.system(size: 13, weight: .medium, design: .serif))
                 .foregroundColor(themeManager.textColor)
                 .multilineTextAlignment(.center)
-            
+
             ZStack {
                 Circle()
                     .stroke(themeManager.colorScheme == .dark ? Color(red: 0.2, green: 0.2, blue: 0.2) : Color(red: 0.9, green: 0.9, blue: 0.9), lineWidth: 6)
                     .frame(width: 60, height: 60)
-                
+
                 Circle()
                     .trim(from: 0, to: CGFloat(progress) / 100)
                     .stroke(progressColor, style: StrokeStyle(lineWidth: 6, lineCap: .round))
                     .frame(width: 60, height: 60)
                     .rotationEffect(.degrees(-90))
                     .animation(.easeInOut(duration: 1), value: progress)
-                
+
                 VStack(spacing: 0) {
                     Text("\(progress)")
                         .font(.system(size: 16, weight: .bold))
@@ -359,10 +312,10 @@ struct FocusCardView: View {
     @State private var weeklyStats = WeeklyStats(done: 0, total: 0)
     @State private var todayTasks: [DailyTask] = []
     @State private var isLoading = false
-    
+
     @EnvironmentObject var themeManager: ThemeManager
     @EnvironmentObject var authManager: AuthenticationManager
-    
+
     var body: some View {
         VStack(spacing: 16) {
             // Header
@@ -372,16 +325,13 @@ struct FocusCardView: View {
                     .foregroundColor(themeManager.textColor)
                 Spacer()
             }
-            
+
             Divider()
                 .background(themeManager.colorScheme == .dark ? Color(red: 0.3, green: 0.3, blue: 0.3) : Color(red: 0.8, green: 0.8, blue: 0.8))
-            
+
             // Content
             VStack(spacing: 16) {
-                // Weekly Stats
                 WeeklyStatsSection(stats: weeklyStats)
-                
-                // Today's Tasks
                 TodaysFocusSection(tasks: todayTasks)
             }
         }
@@ -392,14 +342,11 @@ struct FocusCardView: View {
         .onAppear {
             Task {
                 isLoading = true
-                
-                // Wait for authentication to be ready
                 var attempts = 0
                 while !authManager.isAuthenticated && attempts < 10 {
-                    try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+                    try? await Task.sleep(nanoseconds: 500_000_000)
                     attempts += 1
                 }
-                
                 await fetchWeeklyStats()
                 await fetchTodayTasks()
                 isLoading = false
@@ -414,28 +361,19 @@ struct FocusCardView: View {
             }
         }
     }
-    
-    // MARK: - Data Fetching
+
+    // MARK: - Data
     private func fetchWeeklyStats() async {
         guard authManager.isAuthenticated else { return }
-        
         do {
-            let result = try await Amplify.API.query(
-                request: .list(DailyTask.self)
-            )
+            let result = try await Amplify.API.query(request: .list(DailyTask.self))
             switch result {
             case .success(let tasks):
                 let weekStartDate = Calendar.current.dateInterval(of: .weekOfYear, for: Date())?.start ?? Date()
-                let weekTasks = tasks.filter { task in
-                    return task.date.foundationDate >= weekStartDate
-                }
-                
-                let completedTasks = weekTasks.filter { $0.done == true }.count
-                let totalTasks = weekTasks.count
-                
-                await MainActor.run {
-                    self.weeklyStats = WeeklyStats(done: completedTasks, total: totalTasks)
-                }
+                let weekTasks = tasks.filter { $0.date.foundationDate >= weekStartDate }
+                let completed = weekTasks.filter { $0.done == true }.count
+                let total = weekTasks.count
+                await MainActor.run { self.weeklyStats = WeeklyStats(done: completed, total: total) }
             case .failure(let error):
                 print("Failed to fetch weekly stats: \(error)")
             }
@@ -443,26 +381,16 @@ struct FocusCardView: View {
             print("Error fetching weekly stats: \(error)")
         }
     }
-    
+
     private func fetchTodayTasks() async {
         guard authManager.isAuthenticated else { return }
-        
         do {
             let today = DateFormatter.yyyyMMdd.string(from: Date())
-            let result = try await Amplify.API.query(
-                request: .list(DailyTask.self)
-            )
+            let result = try await Amplify.API.query(request: .list(DailyTask.self))
             switch result {
             case .success(let tasks):
-                // Filter tasks for today
-                let todayTasks = tasks.filter { task in
-                    let taskDateString = task.date.iso8601String.prefix(10)
-                    return String(taskDateString) == today
-                }
-                
-                await MainActor.run {
-                    self.todayTasks = Array(todayTasks.prefix(3))
-                }
+                let todayTasks = tasks.filter { String($0.date.iso8601String.prefix(10)) == today }
+                await MainActor.run { self.todayTasks = Array(todayTasks.prefix(3)) }
             case .failure(let error):
                 print("Failed to fetch today's tasks: \(error)")
             }
@@ -475,29 +403,26 @@ struct FocusCardView: View {
 // MARK: - Weekly Stats Section
 struct WeeklyStatsSection: View {
     let stats: WeeklyStats
-    
     @EnvironmentObject var themeManager: ThemeManager
-    
+
     var body: some View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
                 Text("This Week")
                     .font(.system(size: 13, weight: .medium, design: .serif))
                     .foregroundColor(themeManager.colorScheme == .dark ? Color(red: 0.7, green: 0.7, blue: 0.7) : Color(red: 0.5, green: 0.5, blue: 0.5))
-                
                 Text("\(stats.done) of \(stats.total) tasks")
                     .font(.system(size: 15, weight: .semibold, design: .serif))
                     .foregroundColor(themeManager.textColor)
             }
-            
             Spacer()
-            
+
             // Circular Progress
             ZStack {
                 Circle()
                     .stroke(themeManager.colorScheme == .dark ? Color(red: 0.2, green: 0.2, blue: 0.2) : Color(red: 0.9, green: 0.9, blue: 0.9), lineWidth: 4)
                     .frame(width: 40, height: 40)
-                
+
                 if stats.total > 0 {
                     Circle()
                         .trim(from: 0, to: CGFloat(stats.done) / CGFloat(stats.total))
@@ -505,7 +430,7 @@ struct WeeklyStatsSection: View {
                         .frame(width: 40, height: 40)
                         .rotationEffect(.degrees(-90))
                 }
-                
+
                 Text("\(stats.total > 0 ? Int((Double(stats.done) / Double(stats.total)) * 100) : 0)")
                     .font(.system(size: 12, weight: .bold))
                     .foregroundColor(themeManager.textColor)
@@ -517,17 +442,16 @@ struct WeeklyStatsSection: View {
 // MARK: - Today's Focus Section
 struct TodaysFocusSection: View {
     let tasks: [DailyTask]
-    
     @EnvironmentObject var themeManager: ThemeManager
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Today's Tasks")
                 .font(.system(size: 13, weight: .medium, design: .serif))
                 .foregroundColor(themeManager.colorScheme == .dark ? Color(red: 0.7, green: 0.7, blue: 0.7) : Color(red: 0.5, green: 0.5, blue: 0.5))
-            
+
             if tasks.isEmpty {
-                Text("No tasks for today ✨")
+                Text("No tasks for today")
                     .font(.system(size: 14, design: .serif))
                     .foregroundColor(themeManager.colorScheme == .dark ? Color(red: 0.6, green: 0.6, blue: 0.6) : Color(red: 0.5, green: 0.5, blue: 0.5))
                     .italic()
@@ -538,18 +462,18 @@ struct TodaysFocusSection: View {
                             Circle()
                                 .fill(task.done == true ? themeManager.accentColor : Color(red: 0.8, green: 0.8, blue: 0.8))
                                 .frame(width: 6, height: 6)
-                            
+
                             Text(task.text)
                                 .font(.system(size: 13, design: .serif))
                                 .foregroundColor(themeManager.textColor)
                                 .strikethrough(task.done == true)
-                            
+
                             Spacer()
                         }
                     }
-                    
+
                     if tasks.count >= 3 {
-                        Text("+ \(tasks.count - 3) \("more")")
+                        Text("+ \(tasks.count - 3) more")
                             .font(.system(size: 12, design: .serif))
                             .foregroundColor(themeManager.colorScheme == .dark ? Color(red: 0.6, green: 0.6, blue: 0.6) : Color(red: 0.5, green: 0.5, blue: 0.5))
                             .italic()
@@ -572,14 +496,14 @@ struct WeeklyTasksPieCard: View {
     @State private var unfinished: Int = 0
     @State private var expired: Int = 0
     @State private var useMinutes: Bool = false
-    
+
     @EnvironmentObject var themeManager: ThemeManager
     @EnvironmentObject var authManager: AuthenticationManager
-    
+
     var body: some View {
         VStack(spacing: 16) {
             HStack {
-                Text("🗓️ Weekly Tasks")
+                Text("Weekly Tasks")
                     .font(.system(size: 16, weight: .semibold, design: .serif))
                     .foregroundColor(themeManager.textColor)
                 Spacer()
@@ -598,7 +522,9 @@ struct WeeklyTasksPieCard: View {
                 VStack(alignment: .leading, spacing: 8) {
                     legendRow(color: themeManager.accentColor, title: "Finished", value: finished)
                     legendRow(color: themeManager.accentColor.opacity(0.55), title: "Unfinished", value: unfinished)
-                    if expired > 0 { legendRow(color: Color.gray.opacity(0.5), title: "Expired", value: expired) }
+                    if expired > 0 {
+                        legendRow(color: Color.gray.opacity(0.5), title: "Expired", value: expired)
+                    }
                 }
                 Spacer()
             }
@@ -626,8 +552,9 @@ struct WeeklyTasksPieCard: View {
             if case .success(let tasks) = result {
                 let cal = Calendar.current
                 let weekStart = cal.dateInterval(of: .weekOfYear, for: Date())?.start ?? Date()
-                let weekEnd = cal.date(byAdding: .day, value: 7, to: weekStart) ?? Date()
-                let weekKeyRange = (0..<7).map { DateFormatter.yyyyMMdd.string(from: cal.date(byAdding: .day, value: $0, to: weekStart)!) }
+                let weekKeyRange = (0..<7).compactMap {
+                    cal.date(byAdding: .day, value: $0, to: weekStart).map { DateFormatter.yyyyMMdd.string(from: $0) }
+                }
 
                 // Detect whether to use minutes or counts
                 let hasDuration = tasks.contains { $0.duration?.isEmpty == false }
@@ -636,16 +563,16 @@ struct WeeklyTasksPieCard: View {
                 var finishedVal = 0
                 var unfinishedVal = 0
                 var expiredVal = 0
+
                 for t in tasks {
-                    let dateStr = t.date.iso8601String.prefix(10)
-                    let isThisWeek = weekKeyRange.contains(String(dateStr))
+                    let dateStr = String(t.date.iso8601String.prefix(10))
+                    let isThisWeek = weekKeyRange.contains(dateStr)
                     let minutes = parseMinutes(t.duration)
                     let weight = hasDuration ? minutes : 1
                     if isThisWeek {
                         if t.done == true { finishedVal += weight } else { unfinishedVal += weight }
                     } else {
-                        // expired = before week start and not done
-                        if let d = DateFormatter.yyyyMMdd.date(from: String(dateStr)), d < weekStart, t.done != true {
+                        if let d = DateFormatter.yyyyMMdd.date(from: dateStr), d < weekStart, t.done != true {
                             expiredVal += weight
                         }
                     }
@@ -656,14 +583,15 @@ struct WeeklyTasksPieCard: View {
                     self.expired = expiredVal
                 }
             }
-        } catch { /* ignore in v1 */ }
+        } catch {
+            // ignore for v1
+        }
     }
 
     private func parseMinutes(_ duration: String?) -> Int {
         guard let duration = duration else { return 0 }
         var minutes = 0
-        let parts = duration.split(separator: " ")
-        for p in parts {
+        for p in duration.split(separator: " ") {
             if p.hasSuffix("h"), let h = Int(p.dropLast()) { minutes += h * 60 }
             if p.hasSuffix("m"), let m = Int(p.dropLast()) { minutes += m }
         }
@@ -677,27 +605,26 @@ struct WeeklyTasksPieCard: View {
         return String(format: "%dm", m)
     }
 }
+
 // MARK: - Time Allocation Tracker
 struct TimeAllocationTrackerCard: View {
     @State private var totalMinutesToday: Int = 0
     @State private var categoryMinutes: [(name: String, minutes: Int, color: Color)] = []
-    
+
     @EnvironmentObject var themeManager: ThemeManager
     @EnvironmentObject var authManager: AuthenticationManager
-    
+
     var body: some View {
         VStack(spacing: 16) {
-            // Header
             HStack {
-                Text("🗓️ Time Allocation Today")
+                Text("Time Allocation Today")
                     .font(.system(size: 16, weight: .semibold, design: .serif))
                     .foregroundColor(themeManager.textColor)
                 Spacer()
             }
-            
             Divider()
                 .background(themeManager.colorScheme == .dark ? Color(red: 0.3, green: 0.3, blue: 0.3) : Color(red: 0.85, green: 0.85, blue: 0.85))
-            
+
             // Total
             HStack {
                 Text("Total: \(formatHM(totalMinutesToday))")
@@ -705,12 +632,12 @@ struct TimeAllocationTrackerCard: View {
                     .foregroundColor(.secondary)
                 Spacer()
             }
-            
-            // Pie chart
+
+            // Pie + Legend
             HStack(spacing: 16) {
                 PieChartView(segments: categoryMinutes.map { ($0.color, Double(max($0.minutes, 0))) })
                     .frame(width: 120, height: 120)
-                
+
                 VStack(alignment: .leading, spacing: 8) {
                     ForEach(Array(categoryMinutes.enumerated()), id: \.offset) { _, item in
                         HStack(spacing: 8) {
@@ -723,10 +650,9 @@ struct TimeAllocationTrackerCard: View {
                 }
                 Spacer()
             }
-            
-            // Tip
+
             if let top = categoryMinutes.max(by: { $0.minutes < $1.minutes }) {
-                Text("🎯 Tip: You’ve been focusing most on “\(top.name)” — balance it with Health?")
+                Text("Tip: You’ve been focusing most on “\(top.name)”. Consider balancing with Health.")
                     .font(.system(size: 13, design: .serif))
                     .foregroundColor(.secondary)
             }
@@ -737,17 +663,16 @@ struct TimeAllocationTrackerCard: View {
         .shadow(color: Color.black.opacity(0.06), radius: 6, x: 0, y: 3)
         .task { await loadTodayAllocation() }
     }
-    
+
     private func loadTodayAllocation() async {
         guard authManager.isAuthenticated else { return }
-        // For v1, derive from DailyTask durations (e.g., duration like "1h 30m") and simple category via keywords
         do {
             let today = DateFormatter.yyyyMMdd.string(from: Date())
             let result = try await Amplify.API.query(request: .list(DailyTask.self))
             if case .success(let tasks) = result {
                 let todays = tasks.filter { $0.date.iso8601String.hasPrefix(today) }
                 var total = 0
-                var buckets: [String:Int] = [:]
+                var buckets: [String: Int] = [:]
                 for t in todays {
                     let minutes = parseMinutes(t.duration)
                     total += minutes
@@ -756,33 +681,33 @@ struct TimeAllocationTrackerCard: View {
                 }
                 await MainActor.run {
                     self.totalMinutesToday = total
-                    // Map categories to theme colors deterministically
-                    let palette: [Color] = [themeManager.accentColor,
-                                            themeManager.accentColor.opacity(0.8),
-                                            themeManager.accentColor.opacity(0.6),
-                                            themeManager.accentColor.opacity(0.4)]
+                    let palette: [Color] = [
+                        themeManager.accentColor,
+                        themeManager.accentColor.opacity(0.8),
+                        themeManager.accentColor.opacity(0.6),
+                        themeManager.accentColor.opacity(0.4)
+                    ]
                     let sorted = buckets.sorted { $0.value > $1.value }
                     self.categoryMinutes = Array(sorted.enumerated()).map { idx, kv in
-                        (kv.key, kv.value, palette[min(idx, palette.count-1)])
+                        (kv.key, kv.value, palette[min(idx, palette.count - 1)])
                     }
                 }
             }
         } catch {
-            // silently ignore for now
+            // ignore in v1
         }
     }
-    
+
     private func parseMinutes(_ duration: String?) -> Int {
         guard let duration = duration else { return 0 }
         var minutes = 0
-        let parts = duration.split(separator: " ")
-        for p in parts {
+        for p in duration.split(separator: " ") {
             if p.hasSuffix("h"), let h = Int(p.dropLast()) { minutes += h * 60 }
             if p.hasSuffix("m"), let m = Int(p.dropLast()) { minutes += m }
         }
         return minutes
     }
-    
+
     private func inferCategory(from text: String) -> String {
         let lower = text.lowercased()
         if lower.contains("work") || lower.contains("meeting") { return "Work" }
@@ -791,7 +716,7 @@ struct TimeAllocationTrackerCard: View {
         if lower.contains("family") || lower.contains("friends") { return "Personal" }
         return "Other"
     }
-    
+
     private func formatHM(_ minutes: Int) -> String {
         let h = minutes / 60
         let m = minutes % 60
@@ -800,27 +725,24 @@ struct TimeAllocationTrackerCard: View {
     }
 }
 
-// Simple Pie Chart (percentage-only, no labels)
+// MARK: - Simple Pie Chart
 struct PieChartView: View {
     let segments: [(Color, Double)]
-    
-    var total: Double { max(segments.map{ $0.1 }.reduce(0,+), 0.0001) }
-    
-    // Precompute slices to avoid mutations inside ViewBuilder
+    private var total: Double { max(segments.map { $0.1 }.reduce(0, +), 0.0001) }
+
     private var slices: [(start: Double, end: Double, color: Color)] {
         var result: [(Double, Double, Color)] = []
         var running: Double = 0
-        let denom = total
         for seg in segments {
             let value = max(seg.1, 0)
             let start = running
-            let end = running + (value / denom)
+            let end = running + (value / total)
             result.append((start, end, seg.0))
             running = end
         }
         return result
     }
-    
+
     var body: some View {
         GeometryReader { geo in
             let size = min(geo.size.width, geo.size.height)
@@ -846,6 +768,22 @@ struct PieSlice: Shape {
         p.addArc(center: center, radius: radius, startAngle: startAngle, endAngle: endAngle, clockwise: false)
         p.closeSubpath()
         return p
+    }
+}
+
+// MARK: - Floating "Back to Top"
+struct BackToTopFAB: View {
+    let action: () -> Void
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: "arrow.up.circle.fill")
+                .font(.system(size: 28, weight: .semibold))
+                .symbolRenderingMode(.hierarchical)
+                .padding(10)
+                .background(.ultraThinMaterial, in: Circle())
+        }
+        .buttonStyle(.plain)
+        .shadow(radius: 3)
     }
 }
 

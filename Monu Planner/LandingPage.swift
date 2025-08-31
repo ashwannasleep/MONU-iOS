@@ -21,6 +21,8 @@ struct LandingPageView: View {
     @State private var signupPassword = ""
     @State private var animateElements = false
     @State private var showQuoteAndButton = false
+    @State private var isCheckingSession = true
+    @State private var hasExistingSession = false
     
     let quotes = [
         "Take your time, {name}.",
@@ -100,12 +102,18 @@ struct LandingPageView: View {
                         
                         Spacer().frame(height: 40)
                         
+                      
                         // Content based on state
-                        if showVerification {
+                        if isCheckingSession {
+                            ProgressView()
+                                .scaleEffect(0.8)
+                                .opacity(0.6)
+                        } else if showVerification {
                             verificationView
-                        } else if showQuote {
+                        } else if authManager.isAuthenticated && showQuote {
                             quoteView
-                        } else if !showAuthModal {
+                        } else {
+                            // Always show auth buttons when not authenticated
                             authButtonsView
                         }
                     }
@@ -125,17 +133,13 @@ struct LandingPageView: View {
             .preferredColorScheme(themeManager.colorScheme)
         }
         .onAppear {
-            checkExistingSession()
+            // Start logo animation immediately
             withAnimation(.easeInOut(duration: 0.8)) {
                 animateElements = true
             }
             
-            // Show quote and button together with the logo
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                withAnimation(.easeInOut(duration: 0.8)) {
-                    showQuoteAndButton = true
-                }
-            }
+            // Check for existing session first
+            checkExistingSession()
         }
         #if os(iOS)
         .navigationBarBackButtonHidden(true)
@@ -164,9 +168,9 @@ struct LandingPageView: View {
                 showAuthModal = true
             }
         }
-        .opacity(animateElements ? 1 : 0)
-        .offset(y: animateElements ? 0 : 20)
-        .animation(.easeInOut(duration: 0.8).delay(0.3), value: animateElements)
+        .opacity(animateElements && !isCheckingSession && !hasExistingSession ? 1 : 0)
+        .offset(y: animateElements && !isCheckingSession && !hasExistingSession ? 0 : 20)
+        .animation(.easeInOut(duration: 0.8).delay(0.8), value: animateElements && !isCheckingSession && !hasExistingSession)
     }
     
     private var quoteView: some View {
@@ -231,19 +235,35 @@ struct LandingPageView: View {
     }
     
     private func checkExistingSession() {
+        print("🔍 Checking existing session...")
         Task {
             do {
                 let session = try await Amplify.Auth.fetchAuthSession()
+                print("🔍 Session found, isSignedIn: \(session.isSignedIn)")
+                
                 if session.isSignedIn {
                     let displayName = await getUserDisplayName()
+                    
                     await MainActor.run {
+                        print("🔍 User is signed in, setting up authenticated state")
                         authManager.isAuthenticated = true
-                        await authManager.checkAuthenticationStatus()
+                        hasExistingSession = true
+                        isCheckingSession = false
                         showQuoteAndPrepare(displayName)
+                    }
+                } else {
+                    await MainActor.run {
+                        print("🔍 No active session, showing auth buttons")
+                        isCheckingSession = false
+                        hasExistingSession = false
                     }
                 }
             } catch {
-                // No active session
+                await MainActor.run {
+                    print("🔍 Error checking session: \(error.localizedDescription)")
+                    isCheckingSession = false
+                    hasExistingSession = false
+                }
             }
         }
     }
@@ -295,10 +315,16 @@ struct LandingPageView: View {
         quote = personalizedQuote
         
         print("🎯 Setting showQuote to true")
-        withAnimation(.easeInOut(duration: 0.5)) {
-            showQuote = true
+        showQuote = true
+        
+        // Show quote and button immediately with animation
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            withAnimation(.easeInOut(duration: 0.8)) {
+                showQuoteAndButton = true
+            }
         }
-        print("🎯 showQuote is now: \(showQuote)")
+        
+        print("🎯 showQuote is now: \(showQuote), showQuoteAndButton will be: true")
     }
     
     private func handleSignUp(username: String, password: String, name: String) {
@@ -321,30 +347,42 @@ struct LandingPageView: View {
                     UserDefaults.standard.set(name, forKey: "monu_name")
                     showAuthModal = false
                     showVerification = true
+                    isCheckingSession = false
+                    hasExistingSession = false
                 }
             } catch {
                 await MainActor.run {
-                   
+                    isCheckingSession = false
+                    hasExistingSession = false
                 }
             }
         }
     }
     
+    // FIXED: This is the corrected handleSignIn function
     private func handleSignIn(username: String, password: String) {
         Task {
             do {
                 let result = try await Amplify.Auth.signIn(username: username, password: password)
                 if result.isSignedIn {
                     let displayName = await getUserDisplayName()
+                    
                     await MainActor.run {
+                        print("✅ Sign in successful, updating auth state")
                         authManager.isAuthenticated = true
-                        await authManager.checkAuthenticationStatus()
+                        hasExistingSession = true
+                        isCheckingSession = false
                         showQuoteAndPrepare(displayName.isEmpty ? username : displayName)
                     }
+                    
+                    // Update auth manager status AFTER updating UI state
+                    await authManager.checkAuthenticationStatus()
                 }
             } catch {
+                print("❌ Sign in failed: \(error.localizedDescription)")
                 await MainActor.run {
-                    
+                    isCheckingSession = false
+                    hasExistingSession = false
                 }
             }
         }
@@ -358,37 +396,38 @@ struct LandingPageView: View {
                     confirmationCode: verificationCode.trimmingCharacters(in: .whitespacesAndNewlines)
                 )
                 
-                let displayName = UserDefaults.standard.string(forKey: "monu_name") ?? signupUser
-                await MainActor.run {
-                    showQuoteAndPrepare(displayName)
-                }
-                
                 // Auto sign in after confirmation
                 let _ = try await Amplify.Auth.signIn(username: signupUser, password: signupPassword)
                 
+                let displayName = UserDefaults.standard.string(forKey: "monu_name") ?? signupUser
+                
                 await MainActor.run {
                     authManager.isAuthenticated = true
-                    await authManager.checkAuthenticationStatus()
+                    hasExistingSession = true
+                    isCheckingSession = false
+                    showQuoteAndPrepare(displayName)
                 }
+                
+                await authManager.checkAuthenticationStatus()
                 
             } catch {
                 if error.localizedDescription.contains("Current status is CONFIRMED") {
                     // Already confirmed, just proceed
+                    let _ = try await Amplify.Auth.signIn(username: signupUser, password: signupPassword)
+                    
                     let displayName = UserDefaults.standard.string(forKey: "monu_name") ?? signupUser
                     await MainActor.run {
+                        authManager.isAuthenticated = true
+                        hasExistingSession = true
+                        isCheckingSession = false
                         showQuoteAndPrepare(displayName)
                     }
                     
-                    // Auto sign in after confirmation
-                    let _ = try await Amplify.Auth.signIn(username: signupUser, password: signupPassword)
-                    
-                    await MainActor.run {
-                        authManager.isAuthenticated = true
-                        await authManager.checkAuthenticationStatus()
-                    }
+                    await authManager.checkAuthenticationStatus()
                 } else {
                     await MainActor.run {
-                        
+                        isCheckingSession = false
+                        hasExistingSession = false
                     }
                 }
             }
@@ -493,8 +532,6 @@ struct CustomTextField: View {
     #endif
 }
 
-
-
 // MARK: - Pixel Letter View Component
 struct PixelLetterView: View {
     let letter: String
@@ -546,7 +583,6 @@ struct PixelLetterView: View {
         }
     }
 }
-
 
 // MARK: - Floating Particle View
 struct FloatingParticleView: View {
