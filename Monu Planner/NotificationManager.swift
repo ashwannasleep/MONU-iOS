@@ -66,11 +66,7 @@ class NotificationManager: ObservableObject {
     
     // MARK: - Daily Reminders
     func scheduleDailyReminder(at time: Date) {
-        print("📅 Attempting to schedule daily reminder for \(time)")
-        guard isAuthorized && notificationSettings.dailyReminders else { 
-            print("❌ Daily reminder not scheduled: authorized=\(isAuthorized), enabled=\(notificationSettings.dailyReminders)")
-            return 
-        }
+        guard isAuthorized && notificationSettings.dailyReminders else { return }
         
         let content = UNMutableNotificationContent()
         content.title = "🌿 Time for your daily planning"
@@ -218,43 +214,32 @@ class NotificationManager: ObservableObject {
     
     // MARK: - Update All Notifications
     func updateAllNotifications() {
-        print("🔄 Updating all notifications...")
-        print("📱 Authorization status: \(isAuthorized)")
-        print("⚙️ Notification settings: \(notificationSettings)")
-        
         // Remove all existing notifications
         UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
-        print("🗑️ Removed all pending notifications")
         
         // Schedule based on user preferences
         if notificationSettings.dailyReminders {
-            print("📅 Scheduling daily reminder for \(notificationSettings.dailyReminderTime)")
             scheduleDailyReminder(at: notificationSettings.dailyReminderTime)
         }
         
         if notificationSettings.habitReminders {
-            print("🔄 Scheduling habit reminders")
             scheduleHabitReminders()
         }
         
         if notificationSettings.weeklyProgress {
-            print("📊 Scheduling weekly progress")
             scheduleWeeklyProgress()
         }
         
         if notificationSettings.goalReminders {
-            print("🎯 Scheduling goal reminders")
             scheduleGoalReminders()
         }
         
         if notificationSettings.mindfulnessReminders {
-            print("🧘‍♀️ Scheduling mindfulness reminders")
             scheduleMindfulnessReminders()
         }
         
         // Don't call saveSettings() here to avoid recursive calls
         // Settings are already saved by the onChange modifier
-        print("✅ Finished updating notifications")
     }
     
     // MARK: - Custom Notifications
@@ -276,60 +261,6 @@ class NotificationManager: ObservableObject {
                 print("❌ Failed to schedule custom notification: \(error)")
             } else {
                 print("✅ Custom notification scheduled: \(title)")
-            }
-        }
-    }
-    
-    // MARK: - Test Notifications
-    func scheduleTestNotification() {
-        guard isAuthorized else { 
-            print("❌ Cannot schedule test notification: not authorized")
-            return 
-        }
-        
-        let content = UNMutableNotificationContent()
-        content.title = "🧪 Test Notification"
-        content.body = "This is a test notification from MONU"
-        content.sound = .default
-        content.badge = NSNumber(value: 1)
-        content.categoryIdentifier = "DISMISSIBLE_CATEGORY"
-        
-        // Schedule for 5 seconds from now
-        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 5, repeats: false)
-        let request = UNNotificationRequest(identifier: "test_notification", content: content, trigger: trigger)
-        
-        UNUserNotificationCenter.current().add(request) { error in
-            if let error = error {
-                print("❌ Failed to schedule test notification: \(error)")
-            } else {
-                print("✅ Test notification scheduled for 5 seconds from now")
-            }
-        }
-    }
-    
-    // MARK: - Debug Methods
-    func debugNotificationStatus() {
-        print("🔍 Debugging notification status...")
-        print("📱 Authorization status: \(isAuthorized)")
-        print("⚙️ Settings: \(notificationSettings)")
-        
-        UNUserNotificationCenter.current().getNotificationSettings { settings in
-            print("📋 System notification settings:")
-            print("   - Authorization status: \(settings.authorizationStatus.rawValue)")
-            print("   - Alert setting: \(settings.alertSetting.rawValue)")
-            print("   - Badge setting: \(settings.badgeSetting.rawValue)")
-            print("   - Sound setting: \(settings.soundSetting.rawValue)")
-        }
-        
-        UNUserNotificationCenter.current().getPendingNotificationRequests { requests in
-            print("📝 Pending notifications (\(requests.count)):")
-            for request in requests {
-                print("   - ID: \(request.identifier)")
-                print("     Title: \(request.content.title)")
-                print("     Body: \(request.content.body)")
-                if let trigger = request.trigger as? UNCalendarNotificationTrigger {
-                    print("     Next trigger: \(trigger.nextTriggerDate()?.description ?? "nil")")
-                }
             }
         }
     }
