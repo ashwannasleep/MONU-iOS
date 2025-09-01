@@ -83,6 +83,7 @@ struct SettingsPage: View {
         }
         .onChange(of: notificationManager.notificationSettings) { _ in
             notificationManager.saveSettings()
+            notificationManager.updateAllNotifications()
         }
     }
     
@@ -550,6 +551,48 @@ struct SettingsPage: View {
                     Toggle("", isOn: $notificationManager.notificationSettings.mindfulnessReminders)
                         .toggleStyle(SwitchToggleStyle(tint: themeManager.accentColor))
                         .disabled(!notificationManager.isAuthorized)
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+                .background(themeManager.cardBackgroundColor)
+                .cornerRadius(12)
+                
+                // Debug Button (remove in production)
+                Button(action: {
+                    notificationManager.debugNotificationStatus()
+                }) {
+                    HStack {
+                        Image(systemName: "ladybug")
+                            .foregroundColor(themeManager.accentColor)
+                            .frame(width: 24)
+                        
+                        Text("Debug Notifications")
+                            .font(.custom("Georgia", size: 16))
+                            .foregroundColor(themeManager.textColor)
+                        
+                        Spacer()
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+                .background(themeManager.cardBackgroundColor)
+                .cornerRadius(12)
+                
+                // Test Notification Button (remove in production)
+                Button(action: {
+                    notificationManager.scheduleTestNotification()
+                }) {
+                    HStack {
+                        Image(systemName: "bell.badge")
+                            .foregroundColor(themeManager.accentColor)
+                            .frame(width: 24)
+                        
+                        Text("Test Notification (5s)")
+                            .font(.custom("Georgia", size: 16))
+                            .foregroundColor(themeManager.textColor)
+                        
+                        Spacer()
+                    }
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)

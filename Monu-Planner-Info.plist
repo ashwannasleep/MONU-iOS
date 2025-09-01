@@ -2,8 +2,6 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>GIDClientID</key>
-	<string>632636220479-va5ia9h1850mlu545rjiejrhm3aq283g.apps.googleusercontent.com</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
@@ -21,5 +19,7 @@
 	<string>MONU needs access to your calendars to display and sync your events.</string>
 	<key>NSRemindersUsageDescription</key>
 	<string>MONU can read reminders to help you plan (optional).</string>
+	<key>NSUserNotificationsUsageDescription</key>
+	<string>MONU sends helpful reminders to keep you on track with your daily planning, habits, and goals.</string>
 </dict>
 </plist>

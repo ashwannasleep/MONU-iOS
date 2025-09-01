@@ -66,19 +66,28 @@ class NotificationManager: ObservableObject {
     
     // MARK: - Daily Reminders
     func scheduleDailyReminder(at time: Date) {
-        guard isAuthorized && notificationSettings.dailyReminders else { return }
+        print("📅 Attempting to schedule daily reminder for \(time)")
+        guard isAuthorized && notificationSettings.dailyReminders else { 
+            print("❌ Daily reminder not scheduled: authorized=\(isAuthorized), enabled=\(notificationSettings.dailyReminders)")
+            return 
+        }
         
         let content = UNMutableNotificationContent()
         content.title = "🌿 Time for your daily planning"
         content.body = "Take a moment to plan your day and set your intentions"
         content.sound = .default
-        content.badge = 1
+        content.badge = NSNumber(value: 1)
         content.categoryIdentifier = "DISMISSIBLE_CATEGORY"
         
         let calendar = Calendar.current
         let components = calendar.dateComponents([.hour, .minute], from: time)
         
-        let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: true)
+        // Ensure we have valid components for daily repetition
+        var dailyComponents = DateComponents()
+        dailyComponents.hour = components.hour
+        dailyComponents.minute = components.minute
+        
+        let trigger = UNCalendarNotificationTrigger(dateMatching: dailyComponents, repeats: true)
         let request = UNNotificationRequest(identifier: "daily_reminder", content: content, trigger: trigger)
         
         UNUserNotificationCenter.current().add(request) { error in
@@ -101,7 +110,7 @@ class NotificationManager: ObservableObject {
         content.title = "✨ Habit Check-in"
         content.body = "Don't forget to check off your daily habits"
         content.sound = .default
-        content.badge = 1
+        content.badge = NSNumber(value: 1)
         content.categoryIdentifier = "HABIT_CATEGORY"
         
         // Schedule for 9 PM daily
@@ -129,7 +138,7 @@ class NotificationManager: ObservableObject {
         content.title = "📊 Weekly Progress Report"
         content.body = "See how you've progressed this week and plan for the next"
         content.sound = .default
-        content.badge = 1
+        content.badge = NSNumber(value: 1)
         content.categoryIdentifier = "DISMISSIBLE_CATEGORY"
         
         // Schedule for Sunday at 6 PM
@@ -158,7 +167,7 @@ class NotificationManager: ObservableObject {
         content.title = "🎯 Goal Check-in"
         content.body = "Review your goals and track your progress"
         content.sound = .default
-        content.badge = 1
+        content.badge = NSNumber(value: 1)
         content.categoryIdentifier = "DISMISSIBLE_CATEGORY"
         
         // Schedule for Saturday at 10 AM
@@ -187,7 +196,7 @@ class NotificationManager: ObservableObject {
         content.title = "🧘‍♀️ Mindfulness Moment"
         content.body = "Take a deep breath and center yourself"
         content.sound = .default
-        content.badge = 1
+        content.badge = NSNumber(value: 1)
         content.categoryIdentifier = "DISMISSIBLE_CATEGORY"
         
         // Schedule for 3 PM daily
@@ -209,31 +218,43 @@ class NotificationManager: ObservableObject {
     
     // MARK: - Update All Notifications
     func updateAllNotifications() {
+        print("🔄 Updating all notifications...")
+        print("📱 Authorization status: \(isAuthorized)")
+        print("⚙️ Notification settings: \(notificationSettings)")
+        
         // Remove all existing notifications
         UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
+        print("🗑️ Removed all pending notifications")
         
         // Schedule based on user preferences
         if notificationSettings.dailyReminders {
+            print("📅 Scheduling daily reminder for \(notificationSettings.dailyReminderTime)")
             scheduleDailyReminder(at: notificationSettings.dailyReminderTime)
         }
         
         if notificationSettings.habitReminders {
+            print("🔄 Scheduling habit reminders")
             scheduleHabitReminders()
         }
         
         if notificationSettings.weeklyProgress {
+            print("📊 Scheduling weekly progress")
             scheduleWeeklyProgress()
         }
         
         if notificationSettings.goalReminders {
+            print("🎯 Scheduling goal reminders")
             scheduleGoalReminders()
         }
         
         if notificationSettings.mindfulnessReminders {
+            print("🧘‍♀️ Scheduling mindfulness reminders")
             scheduleMindfulnessReminders()
         }
         
-        saveSettings()
+        // Don't call saveSettings() here to avoid recursive calls
+        // Settings are already saved by the onChange modifier
+        print("✅ Finished updating notifications")
     }
     
     // MARK: - Custom Notifications
@@ -244,6 +265,7 @@ class NotificationManager: ObservableObject {
         content.title = title
         content.body = body
         content.sound = .default
+        content.badge = NSNumber(value: 1)
         content.categoryIdentifier = "DISMISSIBLE_CATEGORY"
         
         let trigger = UNTimeIntervalNotificationTrigger(timeInterval: date.timeIntervalSinceNow, repeats: false)
@@ -254,6 +276,60 @@ class NotificationManager: ObservableObject {
                 print("❌ Failed to schedule custom notification: \(error)")
             } else {
                 print("✅ Custom notification scheduled: \(title)")
+            }
+        }
+    }
+    
+    // MARK: - Test Notifications
+    func scheduleTestNotification() {
+        guard isAuthorized else { 
+            print("❌ Cannot schedule test notification: not authorized")
+            return 
+        }
+        
+        let content = UNMutableNotificationContent()
+        content.title = "🧪 Test Notification"
+        content.body = "This is a test notification from MONU"
+        content.sound = .default
+        content.badge = NSNumber(value: 1)
+        content.categoryIdentifier = "DISMISSIBLE_CATEGORY"
+        
+        // Schedule for 5 seconds from now
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 5, repeats: false)
+        let request = UNNotificationRequest(identifier: "test_notification", content: content, trigger: trigger)
+        
+        UNUserNotificationCenter.current().add(request) { error in
+            if let error = error {
+                print("❌ Failed to schedule test notification: \(error)")
+            } else {
+                print("✅ Test notification scheduled for 5 seconds from now")
+            }
+        }
+    }
+    
+    // MARK: - Debug Methods
+    func debugNotificationStatus() {
+        print("🔍 Debugging notification status...")
+        print("📱 Authorization status: \(isAuthorized)")
+        print("⚙️ Settings: \(notificationSettings)")
+        
+        UNUserNotificationCenter.current().getNotificationSettings { settings in
+            print("📋 System notification settings:")
+            print("   - Authorization status: \(settings.authorizationStatus.rawValue)")
+            print("   - Alert setting: \(settings.alertSetting.rawValue)")
+            print("   - Badge setting: \(settings.badgeSetting.rawValue)")
+            print("   - Sound setting: \(settings.soundSetting.rawValue)")
+        }
+        
+        UNUserNotificationCenter.current().getPendingNotificationRequests { requests in
+            print("📝 Pending notifications (\(requests.count)):")
+            for request in requests {
+                print("   - ID: \(request.identifier)")
+                print("     Title: \(request.content.title)")
+                print("     Body: \(request.content.body)")
+                if let trigger = request.trigger as? UNCalendarNotificationTrigger {
+                    print("     Next trigger: \(trigger.nextTriggerDate()?.description ?? "nil")")
+                }
             }
         }
     }
