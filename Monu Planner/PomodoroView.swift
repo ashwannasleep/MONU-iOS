@@ -98,6 +98,13 @@ struct PomodoroView: View {
     // MARK: - Header
     private var headerView: some View {
         VStack(spacing: 0) {
+            HStack {
+                BackButton()
+                Spacer()
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 48)
+            
             Button { navigationManager.navigateToRoot() } label: {
                 Text("MONU")
                     .font(.custom("Georgia", size: 32))
@@ -105,7 +112,6 @@ struct PomodoroView: View {
                     .foregroundColor(themeManager.colorScheme == .dark ? .white : .black)
             }
             .buttonStyle(.plain)
-            .padding(.top, 48)
             .padding(.bottom, 8)
 
             Text("Master your focus with precision timing 🍅")

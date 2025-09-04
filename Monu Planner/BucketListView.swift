@@ -139,6 +139,13 @@ struct BucketListView: View {
     // MARK: - Header View
     private var headerView: some View {
         VStack(spacing: 0) {
+            HStack {
+                BackButton()
+                Spacer()
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 48)
+            
             Button(action: { navigationManager.navigateToRoot() }) {
                 Text("MONU")
                     .font(.custom("Georgia", size: 32))
@@ -146,7 +153,6 @@ struct BucketListView: View {
                     .foregroundColor(textColor)
             }
             .buttonStyle(PlainButtonStyle())
-            .padding(.top, 48)
             .padding(.bottom, 8)
             
             Text("This is your moment to dream ✨")
@@ -537,6 +543,8 @@ struct BucketItemRow: View {
                             .foregroundColor(item.done ? .secondary : textColor)
                             .strikethrough(item.done)
                             .multilineTextAlignment(.leading)
+                            .lineLimit(nil)
+                            .fixedSize(horizontal: false, vertical: true)
                             .frame(maxWidth: .infinity, alignment: .leading)
                         
                         if item.category != nil || item.date != nil || item.link != nil {

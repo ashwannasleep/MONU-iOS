@@ -117,6 +117,7 @@ struct MonuPlannerApp: App {
                                 .sheet(isPresented: $notificationOnboarding.shouldShowOnboarding) {
                                     NotificationOnboardingView()
                                         .environmentObject(notificationOnboarding)
+                                        .environmentObject(notificationManager)
                                 }
                         }
                         

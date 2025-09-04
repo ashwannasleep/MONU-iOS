@@ -193,7 +193,8 @@ struct EnhancedInsightCard: View {
             Text(insight.message)
                 .font(.system(size: 14, design: .serif))
                 .foregroundColor(colorScheme == .dark ? Color(red: 0.7, green: 0.7, blue: 0.7) : Color(red: 0.4, green: 0.4, blue: 0.4))
-                .lineLimit(4)
+                .lineLimit(nil)
+                .fixedSize(horizontal: false, vertical: true)
                 .multilineTextAlignment(.leading)
             
             // Actionable step
@@ -351,7 +352,8 @@ struct EnhancedTopInsightCard: View {
             Text(insight.message)
                 .font(.system(size: 14, design: .serif))
                 .foregroundColor(colorScheme == .dark ? Color(red: 0.7, green: 0.7, blue: 0.7) : Color(red: 0.4, green: 0.4, blue: 0.4))
-                .lineLimit(3)
+                .lineLimit(nil)
+                .fixedSize(horizontal: false, vertical: true)
                 .multilineTextAlignment(.leading)
             
             // Actionable step

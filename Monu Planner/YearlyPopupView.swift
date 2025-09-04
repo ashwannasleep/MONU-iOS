@@ -870,7 +870,8 @@ struct ImprovedYearlyTaskRow: View {
                 .font(.system(size: 15, weight: .medium))
                 .strikethrough(task.done ?? false, color: .secondary)
                 .foregroundColor(task.done ?? false ? .secondary : (colorScheme == .dark ? .white : Color(red: 0.18, green: 0.18, blue: 0.18)))
-                .lineLimit(2)
+                .lineLimit(nil)
+                .fixedSize(horizontal: false, vertical: true)
                 .multilineTextAlignment(.leading)
 
             Spacer()

@@ -11,6 +11,8 @@ struct SettingsPage: View {
     // Editing state
     @State private var showEditName = false
     @State private var showChangePassword = false
+    @State private var showDeleteAccount = false
+    @State private var showDeleteConfirmation = false
     @State private var newName = ""
     @State private var currentName = ""
     @State private var oldPassword = ""
@@ -58,6 +60,9 @@ struct SettingsPage: View {
                         
                         // App Info Section
                         appInfoSection
+                        
+                        // Delete Account Section
+                        deleteAccountSection
                     }
                     .padding(20)
                 }
@@ -76,6 +81,16 @@ struct SettingsPage: View {
         } message: {
             Text(message)
         }
+        .alert("Delete Account", isPresented: $showDeleteConfirmation) {
+            Button("Cancel", role: .cancel) { }
+            Button("Delete", role: .destructive) {
+                Task {
+                    await deleteAccount()
+                }
+            }
+        } message: {
+            Text("This action cannot be undone. All your data will be permanently deleted.")
+        }
         .onAppear {
             // Refresh user data when settings page appears
             print("📧 Settings: Current user: \(authManager.currentUser?.username ?? "nil")")
@@ -90,6 +105,13 @@ struct SettingsPage: View {
     // MARK: - Header View
     private var header: some View {
         VStack(spacing: 0) {
+            HStack {
+                BackButton()
+                Spacer()
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 48)
+            
             Button { navigationManager.navigateToRoot() } label: {
                 Text("MONU")
                     .font(.custom("Georgia", size: 32))
@@ -97,7 +119,6 @@ struct SettingsPage: View {
                     .foregroundColor(themeManager.textColor)
             }
             .buttonStyle(.plain)
-            .padding(.top, 48)
             .padding(.bottom, 8)
             
             Text("Customize your experience")
@@ -392,9 +413,9 @@ struct SettingsPage: View {
                     Spacer()
                     
                     if !notificationManager.isAuthorized {
-                        Button("Enable") {
+                        Button(getNotificationButtonText()) {
                             Task {
-                                await notificationManager.requestAuthorization()
+                                await handleNotificationPermission()
                             }
                         }
                         .font(.custom("Georgia", size: 14))
@@ -604,6 +625,50 @@ struct SettingsPage: View {
         }
     }
     
+    // MARK: - Delete Account Section
+    private var deleteAccountSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Danger Zone")
+                .font(.custom("Georgia", size: 20))
+                .fontWeight(.semibold)
+                .foregroundColor(.red)
+            
+            VStack(spacing: 12) {
+                Button(action: {
+                    showDeleteConfirmation = true
+                }) {
+                    HStack {
+                        Image(systemName: "trash")
+                            .foregroundColor(.red)
+                            .frame(width: 24)
+                        
+                        Text("Delete Account")
+                            .font(.custom("Georgia", size: 16))
+                            .foregroundColor(.red)
+                        
+                        Spacer()
+                        
+                        Image(systemName: "chevron.right")
+                            .foregroundColor(.red)
+                            .font(.system(size: 14))
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                    .background(themeManager.cardBackgroundColor)
+                    .cornerRadius(12)
+                }
+                .buttonStyle(PlainButtonStyle())
+                .disabled(isLoading)
+                
+                Text("This will permanently delete your account and all associated data. This action cannot be undone.")
+                    .font(.custom("Georgia", size: 12))
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.leading)
+                    .padding(.horizontal, 4)
+            }
+        }
+    }
+    
     // MARK: - Edit Name Sheet
     private var editNameSheet: some View {
         NavigationView {
@@ -785,6 +850,184 @@ struct SettingsPage: View {
                 isLoading = false
             }
         }
+    }
+    
+    // MARK: - Helper Functions
+    private func getNotificationButtonText() -> String {
+        // This would need to be async to check the actual status, but for now we'll use a simple approach
+        return "Open Settings"
+    }
+    
+    private func handleNotificationPermission() async {
+        let center = UNUserNotificationCenter.current()
+        let settings = await center.notificationSettings()
+        
+        switch settings.authorizationStatus {
+        case .notDetermined:
+            let granted = await notificationManager.requestAuthorization()
+            if granted {
+                await MainActor.run {
+                    message = "Notifications enabled successfully"
+                    showMessage = true
+                }
+            }
+        case .denied:
+            // Open Settings app
+            if let settingsUrl = URL(string: UIApplication.openSettingsURLString) {
+                await MainActor.run {
+                    UIApplication.shared.open(settingsUrl)
+                    message = "Please go to Settings > Monu Planner > Notifications and turn on 'Allow Notifications'"
+                    showMessage = true
+                }
+            }
+        case .authorized:
+            await MainActor.run {
+                message = "Notifications are already enabled"
+                showMessage = true
+            }
+        case .provisional, .ephemeral:
+            let granted = await notificationManager.requestAuthorization()
+            if granted {
+                await MainActor.run {
+                    message = "Notifications enabled successfully"
+                    showMessage = true
+                }
+            }
+        @unknown default:
+            let granted = await notificationManager.requestAuthorization()
+            if granted {
+                await MainActor.run {
+                    message = "Notifications enabled successfully"
+                    showMessage = true
+                }
+            }
+        }
+    }
+    
+    private func deleteAccount() async {
+        isLoading = true
+        
+        do {
+            // Delete user data from Amplify
+            if let user = authManager.currentUser {
+                // Delete user data (habits, tasks, goals, etc.)
+                try await deleteUserData()
+                
+                // Delete the user account
+                try await Amplify.Auth.deleteUser()
+                
+                await MainActor.run {
+                    // Clear all local data
+                    clearAllLocalData()
+                    
+                    // Navigate to landing page
+                    navigationManager.navigationPath.removeAll()
+                    authManager.isAuthenticated = false
+                    
+                    message = "Account deleted successfully"
+                    showMessage = true
+                    isLoading = false
+                }
+            } else {
+                await MainActor.run {
+                    message = "No user found to delete"
+                    showMessage = true
+                    isLoading = false
+                }
+            }
+        } catch {
+            await MainActor.run {
+                message = "Failed to delete account: \(error.localizedDescription)"
+                showMessage = true
+                isLoading = false
+            }
+        }
+    }
+    
+    private func deleteUserData() async throws {
+        // Delete all user data from Amplify
+        do {
+            // Delete habits
+            let habitsResult = try await Amplify.API.query(request: .list(Habit.self))
+            if case .success(let habits) = habitsResult {
+                for habit in habits {
+                    try await Amplify.API.mutate(request: .delete(habit))
+                }
+            }
+            
+            // Delete daily tasks
+            let tasksResult = try await Amplify.API.query(request: .list(DailyTask.self))
+            if case .success(let tasks) = tasksResult {
+                for task in tasks {
+                    try await Amplify.API.mutate(request: .delete(task))
+                }
+            }
+            
+            // Delete yearly goals
+            let goalsResult = try await Amplify.API.query(request: .list(YearlyGoal.self))
+            if case .success(let goals) = goalsResult {
+                for goal in goals {
+                    try await Amplify.API.mutate(request: .delete(goal))
+                }
+            }
+            
+            // Delete future goals
+            let futureGoalsResult = try await Amplify.API.query(request: .list(FutureGoal.self))
+            if case .success(let futureGoals) = futureGoalsResult {
+                for goal in futureGoals {
+                    try await Amplify.API.mutate(request: .delete(goal))
+                }
+            }
+            
+            // Delete bucket list items
+            let bucketItemsResult = try await Amplify.API.query(request: .list(BucketItem.self))
+            if case .success(let bucketItems) = bucketItemsResult {
+                for item in bucketItems {
+                    try await Amplify.API.mutate(request: .delete(item))
+                }
+            }
+            
+            // Delete yearly popup tasks
+            let popupTasksResult = try await Amplify.API.query(request: .list(YearlyPopupTask.self))
+            if case .success(let popupTasks) = popupTasksResult {
+                for task in popupTasks {
+                    try await Amplify.API.mutate(request: .delete(task))
+                }
+            }
+            
+            // Delete user settings
+            let settingsResult = try await Amplify.API.query(request: .list(UserSettings.self))
+            if case .success(let settings) = settingsResult {
+                for setting in settings {
+                    try await Amplify.API.mutate(request: .delete(setting))
+                }
+            }
+            
+        } catch {
+            print("❌ Error deleting user data: \(error)")
+            // Continue with account deletion even if data deletion fails
+        }
+    }
+    
+    private func clearAllLocalData() {
+        // Clear all UserDefaults
+        let domain = Bundle.main.bundleIdentifier!
+        UserDefaults.standard.removePersistentDomain(forName: domain)
+        
+        // Clear specific keys
+        UserDefaults.standard.removeObject(forKey: "user_email")
+        UserDefaults.standard.removeObject(forKey: "monu_name")
+        UserDefaults.standard.removeObject(forKey: "hasSeenWelcome")
+        UserDefaults.standard.removeObject(forKey: "has_seen_notification_onboarding")
+        UserDefaults.standard.removeObject(forKey: "has_dismissed_notification_onboarding")
+        UserDefaults.standard.removeObject(forKey: "notification_settings")
+        
+        // Clear Pomodoro data
+        UserDefaults.standard.removeObject(forKey: "pomodoroHistory")
+        UserDefaults.standard.removeObject(forKey: "pomodoroIsRunning")
+        UserDefaults.standard.removeObject(forKey: "pomodoroEndDate")
+        UserDefaults.standard.removeObject(forKey: "pomodoroCustomMinutes")
+        UserDefaults.standard.removeObject(forKey: "pomodoroSelectedActivity")
     }
 }
 

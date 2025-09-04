@@ -72,7 +72,10 @@ struct ChoosePageView: View {
 
                         // Scrollable modules grid
                         ScrollView {
-                            LazyVGrid(columns: gridColumns(for: geometry.size.width), spacing: 24) {
+                            LazyVGrid(
+                                columns: LayoutHelper.responsiveGridColumns(for: geometry.size.width, maxColumns: 2),
+                                spacing: LayoutHelper.responsiveSpacing(for: geometry.size.width)
+                            ) {
                                 ForEach(modules, id: \.self) { module in
                                     ModuleCard(
                                         module: module,
@@ -86,7 +89,7 @@ struct ChoosePageView: View {
                                     }
                                 }
                             }
-                            .padding(.horizontal, 32)
+                            .padding(.horizontal, LayoutHelper.responsivePadding(for: geometry.size.width))
                             .padding(.bottom, 40)
                         }
                     }
@@ -107,11 +110,6 @@ struct ChoosePageView: View {
         }
         #endif
         .navigationBarBackButtonHidden(true)
-    }
-
-    private func gridColumns(for width: CGFloat) -> [GridItem] {
-        let isWide = width > 768
-        return Array(repeating: GridItem(.flexible(), spacing: 24), count: isWide ? 2 : 1)
     }
 
     private func loadUserName() {
@@ -147,15 +145,19 @@ struct ModuleCard: View {
                     .fontWeight(.bold)
                     .foregroundColor(textColor)
                     .multilineTextAlignment(.center)
+                    .lineLimit(nil)
+                    .fixedSize(horizontal: false, vertical: true)
 
                 Text(module.description)
                     .font(.custom("Georgia", size: 14))
                     .foregroundColor(secondaryTextColor)
                     .multilineTextAlignment(.center)
+                    .lineLimit(nil)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             .padding(24)
             .frame(maxWidth: .infinity)
-            .frame(minHeight: 100)
+            .frame(minHeight: 120)
             .background(
                 isHovered
                     ? (colorScheme == .dark

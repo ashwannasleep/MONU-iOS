@@ -808,6 +808,13 @@ struct HabitTrackerView: View {
     // MARK: - Header
     private var modernHeader: some View {
         VStack(spacing: 0) {
+            HStack {
+                BackButton()
+                Spacer()
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 48)
+            
             Button { navigationManager.navigateToRoot() } label: {
                 Text("MONU")
                     .font(.custom("Georgia", size: 32))
@@ -815,7 +822,6 @@ struct HabitTrackerView: View {
                     .foregroundColor(themeManager.textColor)
             }
             .buttonStyle(.plain)
-            .padding(.top, 48)
             .padding(.bottom, 8)
             
             Text("Build lasting habits for success")
@@ -1090,7 +1096,7 @@ struct ModernStatCard: View {
             Text(icon).font(.system(size: 24))
             VStack(spacing: 4) {
                 Text(value).font(.custom("Georgia", size: 20)).fontWeight(.bold).foregroundColor(themeManager.textColor)
-                Text(title).font(.system(size: 12, weight: .medium)).foregroundColor(.secondary).multilineTextAlignment(.center)
+                Text(title).font(.system(size: 12, weight: .medium)).foregroundColor(.secondary).multilineTextAlignment(.center).lineLimit(nil).fixedSize(horizontal: false, vertical: true)
             }
         }
         .frame(maxWidth: .infinity)

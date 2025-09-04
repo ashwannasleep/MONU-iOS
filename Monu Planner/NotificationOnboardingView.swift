@@ -5,6 +5,7 @@ struct NotificationOnboardingView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) var colorScheme
     @EnvironmentObject var notificationManager: NotificationManager
+    @State private var showSettingsGuidance = false
     
     var body: some View {
         ZStack {
@@ -43,7 +44,8 @@ struct NotificationOnboardingView: View {
                         .font(.custom("Georgia", size: 16))
                         .foregroundColor(colorScheme == .dark ? Color(red: 0.7, green: 0.7, blue: 0.7) : Color(red: 0.5, green: 0.5, blue: 0.5))
                         .multilineTextAlignment(.center)
-                        .lineLimit(3)
+                        .lineLimit(nil)
+                        .fixedSize(horizontal: false, vertical: true)
                         .padding(.horizontal, 24)
                 }
                 .padding(.bottom, 32)
@@ -63,16 +65,13 @@ struct NotificationOnboardingView: View {
                     // Enable button
                     Button(action: {
                         Task {
-                            let granted = await notificationManager.requestAuthorization()
-                            if granted {
-                                dismiss()
-                            }
+                            await handleNotificationPermission()
                         }
                     }) {
                         HStack {
                             Image(systemName: "bell.fill")
                                 .font(.system(size: 16))
-                            Text("Enable Notifications")
+                            Text(getButtonText())
                                 .font(.custom("Georgia", size: 16))
                                 .fontWeight(.semibold)
                         }
@@ -100,6 +99,86 @@ struct NotificationOnboardingView: View {
             .cornerRadius(20)
             .shadow(color: Color.black.opacity(0.2), radius: 20, x: 0, y: 10)
             .padding(.horizontal, 32)
+        }
+        .alert("Enable Notifications", isPresented: $showSettingsGuidance) {
+            Button("OK") {
+                showSettingsGuidance = false
+            }
+        } message: {
+            Text("1. In Settings, find 'Monu Planner'\n2. Tap on it\n3. Tap 'Notifications'\n4. Turn on 'Allow Notifications'\n5. Return to the app")
+        }
+        .onAppear {
+            checkNotificationStatus()
+        }
+    }
+    
+    // MARK: - Helper Functions
+    private func getButtonText() -> String {
+        return "Enable Notifications"
+    }
+    
+    private func checkNotificationStatus() {
+        Task {
+            let center = UNUserNotificationCenter.current()
+            let settings = await center.notificationSettings()
+            
+            if settings.authorizationStatus == .authorized {
+                await MainActor.run {
+                    NotificationOnboardingManager.shared.markOnboardingAsSeen()
+                    dismiss()
+                }
+            }
+        }
+    }
+    
+    private func handleNotificationPermission() async {
+        let center = UNUserNotificationCenter.current()
+        
+        // Get current authorization status
+        let settings = await center.notificationSettings()
+        
+        switch settings.authorizationStatus {
+        case .notDetermined:
+            // First time - request permission
+            let granted = await notificationManager.requestAuthorization()
+            if granted {
+                NotificationOnboardingManager.shared.markOnboardingAsSeen()
+                dismiss()
+            }
+            
+        case .denied:
+            // User denied before - open Settings
+            if let settingsUrl = URL(string: UIApplication.openSettingsURLString) {
+                await MainActor.run {
+                    UIApplication.shared.open(settingsUrl)
+                }
+                // Show a helpful message to guide the user
+                await MainActor.run {
+                    // We'll add a state to show guidance after opening settings
+                    showSettingsGuidance = true
+                }
+            }
+            
+        case .authorized:
+            // Already authorized
+            NotificationOnboardingManager.shared.markOnboardingAsSeen()
+            dismiss()
+            
+        case .provisional, .ephemeral:
+            // Request full authorization
+            let granted = await notificationManager.requestAuthorization()
+            if granted {
+                NotificationOnboardingManager.shared.markOnboardingAsSeen()
+                dismiss()
+            }
+            
+        @unknown default:
+            // Fallback to request permission
+            let granted = await notificationManager.requestAuthorization()
+            if granted {
+                NotificationOnboardingManager.shared.markOnboardingAsSeen()
+                dismiss()
+            }
         }
     }
     

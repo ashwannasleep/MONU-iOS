@@ -101,6 +101,13 @@ struct MonthlyPlannerView: View {
     
     private var headerView: some View {
         VStack(spacing: 0) {
+            HStack {
+                BackButton()
+                Spacer()
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 48)
+            
             Button(action: {
                 navigationManager.navigateToRoot()
             }) {
@@ -110,7 +117,6 @@ struct MonthlyPlannerView: View {
                     .foregroundColor(textColor)
             }
             .buttonStyle(PlainButtonStyle())
-            .padding(.top, 48)
             .padding(.bottom, 8)
             
             Text("Your schedule, your flow 📅")

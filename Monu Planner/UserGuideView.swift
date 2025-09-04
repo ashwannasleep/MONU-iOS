@@ -73,6 +73,13 @@ struct UserGuideView: View {
     // MARK: - Elegant Header View
     private var elegantHeaderView: some View {
         VStack(spacing: 0) {
+            HStack {
+                BackButton()
+                Spacer()
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 48)
+            
             Button { navigationManager.navigateToRoot() } label: {
                 Text("MONU")
                     .font(.custom("Georgia", size: 32))
@@ -80,7 +87,6 @@ struct UserGuideView: View {
                     .foregroundColor(textColor)
             }
             .buttonStyle(.plain)
-            .padding(.top, 48)
             .padding(.bottom, 8)
             
             Text("Master the art of mindful planning")

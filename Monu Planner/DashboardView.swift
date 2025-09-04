@@ -98,15 +98,6 @@ struct DashboardView: View {
                             .padding(.bottom, 100)
                     }
                 }
-                .overlay(alignment: .bottomTrailing) {
-                    BackToTopFAB {
-                        withAnimation(.easeInOut(duration: 0.5)) {
-                            proxy.scrollTo(topAnchor, anchor: UnitPoint.top)
-                        }
-                    }
-                    .padding(.trailing, 24)
-                    .padding(.bottom, 24)
-                }
                 .onAppear {
                     Task { await loadData() }
                 }
@@ -124,6 +115,13 @@ struct DashboardView: View {
     // MARK: - Header View
     private var header: some View {
         VStack(spacing: 0) {
+            HStack {
+                BackButton()
+                Spacer()
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 48)
+            
             Button { navigationManager.navigateToRoot() } label: {
                 Text("MONU")
                     .font(.custom("Georgia", size: 32))
@@ -131,7 +129,6 @@ struct DashboardView: View {
                     .foregroundColor(themeManager.textColor)
             }
             .buttonStyle(.plain)
-            .padding(.top, 48)
             .padding(.bottom, 8)
 
             Text("Track your progress and achievements")
@@ -276,6 +273,8 @@ struct DashboardCard: View {
                 .font(.system(size: 13, weight: .medium, design: .serif))
                 .foregroundColor(themeManager.textColor)
                 .multilineTextAlignment(.center)
+                .lineLimit(nil)
+                .fixedSize(horizontal: false, vertical: true)
 
             ZStack {
                 Circle()
@@ -303,7 +302,7 @@ struct DashboardCard: View {
         .background(themeManager.cardBackgroundColor)
         .cornerRadius(12)
         .shadow(color: Color.black.opacity(0.06), radius: 6, x: 0, y: 3)
-        .frame(width: 120)
+        .frame(minWidth: 120, maxWidth: 140)
     }
 }
 

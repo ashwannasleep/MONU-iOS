@@ -275,7 +275,8 @@ struct TaskRow: View {
                         .font(.system(size: 16, weight: .medium, design: .default))
                         .foregroundColor(task.done == true ? .secondary : .primary)
                         .strikethrough(task.done == true)
-                        .lineLimit(2)
+                        .lineLimit(nil)
+                        .fixedSize(horizontal: false, vertical: true)
                     
                     if let time = task.time, !time.isEmpty {
                         Text(time)
