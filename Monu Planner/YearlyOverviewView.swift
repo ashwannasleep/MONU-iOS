@@ -78,8 +78,8 @@ struct YearlyOverviewView: View {
                 BackButton()
                 Spacer()
             }
-            .padding(.horizontal, 20)
-            .padding(.top, 48)
+            .padding(.horizontal, LayoutHelper.responsivePadding(for: LayoutHelper.screenWidth))
+            .padding(.top, LayoutHelper.isIPad ? 60 : 48)
             
             Button(action: {
                 navigationManager.navigate(to: .choose)

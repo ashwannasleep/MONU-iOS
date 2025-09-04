@@ -1,12 +1,23 @@
 import SwiftUI
 import Amplify
 import Foundation
+import UIKit
 
-// MARK: - Utilities for Time Formatting
+// ============================================================
+// MARK: - Small font scaler that piggybacks on your LayoutHelper
+// ============================================================
+fileprivate func scaledFont(_ base: CGFloat, width w: CGFloat) -> CGFloat {
+    // Light, predictable steps based on your breakpoints
+    if w > LayoutHelper.largeiPadBreakpoint { return base * 1.20 } // big iPad / external
+    if w > LayoutHelper.iPadBreakpoint     { return base * 1.10 }  // iPad
+    return base // iPhone
+}
+
+// ============================================================
+// MARK: - Time Formatting Utils (unchanged)
+// ============================================================
 fileprivate enum TimeFormatterUtil {
-    /// Convert "h:mm AM/PM" → "HH:mm"
     static func displayTo24h(_ display: String) -> String? {
-        // Try common forms: "h:mm a", "h:m a" (just in case)
         let fmts = ["h:mm a", "h:m a", "h a"]
         for f in fmts {
             let df = DateFormatter()
@@ -23,8 +34,6 @@ fileprivate enum TimeFormatterUtil {
         }
         return nil
     }
-
-    /// Convert "HH:mm" → "h:mm AM/PM"
     static func h24ToDisplay(_ h24: String) -> String? {
         let df = DateFormatter()
         df.dateFormat = "HH:mm"
@@ -39,27 +48,18 @@ fileprivate enum TimeFormatterUtil {
         }
         return nil
     }
-
-    /// Normalize any incoming time string to "h:mm AM/PM" for display.
     static func normalizeForDisplay(_ maybeTime: String?) -> String? {
         guard let t = maybeTime, !t.isEmpty else { return nil }
-        // If it already looks like AM/PM, keep it but also round-trip to clean spacing
         if t.uppercased().contains("AM") || t.uppercased().contains("PM") {
-            // Re-parse as display → 24h → display (to normalize)
             if let h24 = displayTo24h(t), let disp = h24ToDisplay(h24) { return disp }
             return t
         }
-        // Otherwise assume 24h and convert to display
         if let disp = h24ToDisplay(t) { return disp }
         return t
     }
-
-    /// Build "h:mm AM/PM" from wheel selections
     static func fromPickers(hour: Int, minute: Int, ampm: String) -> String {
         String(format: "%d:%02d %@", hour, minute, ampm)
     }
-
-    /// Build canonical "HH:mm" for storage from wheel selections
     static func to24h(hour: Int, minute: Int, ampm: String) -> String {
         var h = hour % 12
         if ampm.uppercased() == "PM" { h += 12 }
@@ -67,7 +67,9 @@ fileprivate enum TimeFormatterUtil {
     }
 }
 
-// MARK: - DailyPlanTask
+// ============================================================
+// MARK: - UI Facade for Amplify Model
+// ============================================================
 struct DailyPlanTask: Identifiable, Equatable {
     let id: String
     var date: String
@@ -91,7 +93,6 @@ extension DailyPlanTask {
         self.id = apiModel.id
         self.date = apiModel.date.iso8601String
         self.text = apiModel.text
-        // Normalize any incoming time string for UI display
         self.time = TimeFormatterUtil.normalizeForDisplay(apiModel.time)
         self.duration = apiModel.duration
         self.order = apiModel.order ?? 0
@@ -99,21 +100,13 @@ extension DailyPlanTask {
         self.owner = apiModel.owner
     }
 
-    /// Convert UI task back to API model
-    /// - Stores time canonically as "HH:mm" (if a time exists).
     func toAPITask() -> DailyTask? {
         let dateOnlyString = String(self.date.prefix(10))
         guard let dateOnly = try? Temporal.Date(iso8601String: dateOnlyString) else { return nil }
 
-        // Normalize time -> "HH:mm" if possible
         var apiTime: String? = nil
         if let t = self.time, !t.isEmpty {
-            if let h24 = TimeFormatterUtil.displayTo24h(t) {
-                apiTime = h24
-            } else {
-                // If it's already "HH:mm" or unrecognized, pass through
-                apiTime = t
-            }
+            apiTime = TimeFormatterUtil.displayTo24h(t) ?? t
         }
 
         return DailyTask(
@@ -129,6 +122,9 @@ extension DailyPlanTask {
     }
 }
 
+// ============================================================
+// MARK: - DailyPlanView
+// ============================================================
 struct DailyPlanView: View {
     @EnvironmentObject var themeManager: ThemeManager
     @EnvironmentObject var navigationManager: NavigationContainer.NavigationManager
@@ -166,91 +162,100 @@ struct DailyPlanView: View {
     }
 
     var body: some View {
-        ZStack {
-            (themeManager.colorScheme == .dark ? Color(red:0.12,green:0.12,blue:0.12) : Color(red:0.97,green:0.96,blue:0.94))
-                .ignoresSafeArea()
+        GeometryReader { geo in
+            let cw = geo.size.width
+            let pad = LayoutHelper.responsivePadding(for: cw)
+            let spacing = LayoutHelper.responsiveSpacing(for: cw)
 
-            ScrollView {
-                VStack(spacing: 0) {
-                    header
-                    weekStrip
-                        .padding(.bottom, 24)
-                    dateProgress
-                        .padding(.horizontal, 20)
-                        .padding(.bottom, 24)
-                    addBox
-                        .padding(.horizontal, 20)
-                        .padding(.bottom, 24)
-                    tasks
-                        .padding(.horizontal, 20)
-                        .padding(.bottom, 40)
-                }
-            }
-
-            // ======= COMPACT FLOATING PICKERS (no sheet/popover) =======
-            if showTimePicker || showDurPicker {
-                // background tap to dismiss
-                Color.black.opacity(0.001)
+            ZStack {
+                (themeManager.colorScheme == .dark ? Color(red:0.12,green:0.12,blue:0.12)
+                                                   : Color(red:0.97,green:0.96,blue:0.94))
                     .ignoresSafeArea()
-                    .onTapGesture {
-                        showTimePicker = false
-                        showDurPicker = false
-                    }
 
-                VStack {
-                    Spacer()
-                    VStack(spacing: 16) {
-                        HStack {
-                            Text(showTimePicker ? "Select Time" : "Select Duration")
-                                .font(.system(size: 16, weight: .semibold))
-                            Spacer()
-                            Button("Done") {
-                                showTimePicker = false
-                                showDurPicker  = false
-                            }
-                            .font(.system(size: 14, weight: .medium))
+                ScrollView {
+                    VStack(spacing: 0) {
+                        VStack(spacing: 0) {
+                            header(cw)
+                            weekStrip(cw, horizontalPadding: pad)
+                                .padding(.bottom, spacing)
+
+                            dateProgress(cw)
+                                .padding(.horizontal, pad)
+                                .padding(.bottom, spacing)
+
+                            addBox(cw)
+                                .padding(.horizontal, pad)
+                                .padding(.bottom, spacing)
+
+                            tasks(cw)
+                                .padding(.horizontal, pad)
+                                .padding(.bottom, 40)
                         }
-
-                        if showTimePicker { timeRoller } else { durationRoller }
+                        .frame(maxWidth: maxContentWidth(for: cw, padding: pad))
+                        .frame(maxWidth: .infinity)
                     }
-                    .padding(16)
-                    .frame(maxWidth: 340)
-                    .background(themeManager.cardBackgroundColor)
-                    .cornerRadius(14)
-                    .shadow(color: .black.opacity(0.2), radius: 16, x: 0, y: 8)
-                    .padding(.bottom, 40)
                 }
-                .transition(.scale.combined(with: .opacity))
-                .animation(.spring(response: 0.28, dampingFraction: 0.9), value: showTimePicker || showDurPicker)
+
+                if showTimePicker || showDurPicker {
+                    Color.black.opacity(0.001)
+                        .ignoresSafeArea()
+                        .onTapGesture { showTimePicker = false; showDurPicker = false }
+
+                    VStack {
+                        Spacer()
+                        VStack(spacing: 16) {
+                            HStack {
+                                Text(showTimePicker ? "Select Time" : "Select Duration")
+                                    .font(.system(size: scaledFont(16, width: cw), weight: .semibold))
+                                Spacer()
+                                Button("Done") { showTimePicker = false; showDurPicker = false }
+                                    .font(.system(size: scaledFont(14, width: cw), weight: .medium))
+                            }
+                            if showTimePicker { timeRoller(cw) } else { durationRoller(cw) }
+                        }
+                        .padding(pad)
+                        .frame(maxWidth: min(maxContentWidth(for: cw, padding: pad) * 0.85, 420))
+                        .background(themeManager.cardBackgroundColor)
+                        .cornerRadius(14)
+                        .shadow(color: .black.opacity(0.2), radius: 16, x: 0, y: 8)
+                        .padding(.bottom, 40)
+                    }
+                    .transition(.scale.combined(with: .opacity))
+                    .animation(.spring(response: 0.28, dampingFraction: 0.9), value: showTimePicker || showDurPicker)
+                }
             }
-            // ============================================================
         }
         .navigationBarHidden(true)
         .onAppear { load() }
         .onChange(of: selectedDate) { _,_ in load() }
-        .refreshable {
-            await refreshTasks()
-        }
+        .refreshable { await refreshTasks() }
         .alert("Error", isPresented: $showErr) {
             Button("OK", role: .cancel) { }
-        } message: {
-            Text(error)
-        }
+        } message: { Text(error) }
     }
 
-    // MARK: - Header etc (unchanged)
-    private var header: some View {
+    // A single “readable column” width that feels good on all devices.
+    private func maxContentWidth(for cw: CGFloat, padding pad: CGFloat) -> CGFloat {
+        if cw > LayoutHelper.largeiPadBreakpoint { return 900 }
+        if cw > LayoutHelper.iPadBreakpoint     { return 760 }
+        return min(420, cw - 2 * pad)
+    }
+
+    // ========================================================
+    // MARK: - Header
+    // ========================================================
+    private func header(_ cw: CGFloat) -> some View {
         VStack(spacing: 0) {
             HStack {
                 BackButton()
                 Spacer()
             }
-            .padding(.horizontal, 20)
-            .padding(.top, 48)
-            
+            .padding(.horizontal, LayoutHelper.responsivePadding(for: cw))
+            .padding(.top, 12)
+
             Button { navigationManager.navigateToRoot() } label: {
                 Text("MONU")
-                    .font(.custom("Georgia", size: 32))
+                    .font(.custom("Georgia", size: scaledFont(32, width: cw)))
                     .fontWeight(.bold)
                     .foregroundColor(themeManager.colorScheme == .dark ? .white : .black)
             }
@@ -258,38 +263,55 @@ struct DailyPlanView: View {
             .padding(.bottom, 8)
 
             Text("Balance, intention, and clarity — one day at a time.")
-                .font(.custom("Georgia", size: 16))
+                .font(.custom("Georgia", size: scaledFont(16, width: cw)))
                 .italic()
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
+                .padding(.horizontal, LayoutHelper.responsivePadding(for: cw))
                 .padding(.top, 16)
                 .padding(.bottom, 32)
         }
     }
 
-    private var weekStrip: some View {
+    // ========================================================
+    // MARK: - Week strip
+    // ========================================================
+    private func weekStrip(_ cw: CGFloat, horizontalPadding pad: CGFloat) -> some View {
         let cal = Calendar.current
         let start = cal.dateInterval(of: .weekOfYear, for: Date())!.start
         let days = (0..<7).compactMap { cal.date(byAdding: .day, value: $0, to: start) }
 
+        let columnWidth = maxContentWidth(for: cw, padding: pad)
+        let inner = columnWidth - pad * 2
+        let gap: CGFloat =  LayoutHelper.responsiveSpacing(for: cw) * 0.66
+        // 7 items + 6 gaps
+        let pillWidth = max(38, min(56, (inner - gap * 6) / 7))
+        let pillHeight = pillWidth + (cw > LayoutHelper.iPadBreakpoint ? 8 : 4)
+
         return HStack(spacing: 0) {
             Spacer(minLength: 0)
-            HStack(spacing: 16) {
+            HStack(spacing: gap) {
                 ForEach(days, id: \.self) { d in
-                    WeekDayView(date: d,
-                                isSelected: cal.isDate(d, inSameDayAs: selectedDate)) {
-                        selectedDate = d
-                    }
+                    WeekDayView(
+                        cw: cw,
+                        date: d,
+                        isSelected: cal.isDate(d, inSameDayAs: selectedDate),
+                        width: pillWidth,
+                        height: pillHeight
+                    ) { selectedDate = d }
                 }
             }
             Spacer(minLength: 0)
         }
     }
 
-    private var dateProgress: some View {
+    // ========================================================
+    // MARK: - Date progress
+    // ========================================================
+    private func dateProgress(_ cw: CGFloat) -> some View {
         VStack(spacing: 12) {
             Text(selectedDate.formatted(.dateTime.weekday(.wide).month(.abbreviated).day()))
-                .font(.custom("Georgia", size: 18))
+                .font(.custom("Georgia", size: scaledFont(18, width: cw)))
                 .italic()
                 .foregroundColor(.secondary)
                 .frame(maxWidth: .infinity)
@@ -310,20 +332,23 @@ struct DailyPlanView: View {
                 .frame(height: 8)
 
                 Text("\(progress)% complete")
-                    .font(.custom("Georgia", size: 14))
+                    .font(.custom("Georgia", size: scaledFont(14, width: cw)))
                     .foregroundColor(.secondary)
             }
         }
-        .padding(16)
+        .padding(LayoutHelper.responsivePadding(for: cw))
         .background(themeManager.cardBackgroundColor)
         .cornerRadius(12)
         .shadow(color: Color.black.opacity(0.06), radius: 8, x: 0, y: 3)
     }
 
-    private var addBox: some View {
+    // ========================================================
+    // MARK: - Add Box
+    // ========================================================
+    private func addBox(_ cw: CGFloat) -> some View {
         VStack(spacing: 16) {
             TextField("Add a new task...", text: $newTaskText, axis: .vertical)
-                .font(.custom("Georgia", size: 16))
+                .font(.custom("Georgia", size: scaledFont(16, width: cw)))
                 .padding(14)
                 .frame(minHeight: 50)
                 .background(themeManager.colorScheme == .dark ? Color(red:0.18,green:0.18,blue:0.18) : Color(red:0.98,green:0.98,blue:0.98))
@@ -332,18 +357,18 @@ struct DailyPlanView: View {
                 .onSubmit { save() }
 
             HStack(spacing: 12) {
-                pickerBtn(image: "clock", label: timeString, isEmpty: timeString.isEmpty) {
+                pickerBtn(cw: cw, image: "clock", label: timeString, isEmpty: timeString.isEmpty) {
                     showDurPicker = false
                     withAnimation { showTimePicker = true }
                 }
-
-                pickerBtn(image: "timer", label: durString, isEmpty: durString.isEmpty) {
+                pickerBtn(cw: cw, image: "timer", label: durString, isEmpty: durString.isEmpty) {
                     showTimePicker = false
                     withAnimation { showDurPicker = true }
                 }
-
                 Button(action: save) {
-                    Text("＋").font(.system(size: 20, weight: .medium)).foregroundColor(.white)
+                    Text("＋")
+                        .font(.system(size: scaledFont(20, width: cw), weight: .medium))
+                        .foregroundColor(.white)
                         .frame(width: 44, height: 44)
                         .background(themeManager.accentColor)
                         .cornerRadius(8)
@@ -351,13 +376,13 @@ struct DailyPlanView: View {
                 .disabled(newTaskText.trimmingCharacters(in: .whitespaces).isEmpty)
             }
         }
-        .padding(16)
+        .padding(LayoutHelper.responsivePadding(for: cw))
         .background(themeManager.cardBackgroundColor)
         .cornerRadius(12)
         .shadow(color: .black.opacity(0.06), radius: 8, x: 0, y: 3)
     }
 
-    @ViewBuilder private func pickerBtn(image: String, label: String, isEmpty: Bool, action: @escaping () -> Void) -> some View {
+    @ViewBuilder private func pickerBtn(cw: CGFloat, image: String, label: String, isEmpty: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             HStack {
                 Image(systemName: image).foregroundColor(.secondary).font(.system(size: 14))
@@ -365,7 +390,7 @@ struct DailyPlanView: View {
                 Spacer()
                 Image(systemName: "chevron.down").foregroundColor(.secondary).font(.system(size: 12))
             }
-            .font(.custom("Georgia", size: 16))
+            .font(.custom("Georgia", size: scaledFont(16, width: cw)))
             .padding(12).frame(height: 44)
             .background(themeManager.colorScheme == .dark ? Color(red:0.18,green:0.18,blue:0.18) : Color(red:0.98,green:0.98,blue:0.98))
             .overlay(RoundedRectangle(cornerRadius: 8).stroke(themeManager.accentColor.opacity(0.3), lineWidth: 1))
@@ -374,80 +399,109 @@ struct DailyPlanView: View {
         .buttonStyle(.plain)
     }
 
-    private var tasks: some View {
+    // ========================================================
+    // MARK: - Tasks
+    // ========================================================
+    private func tasks(_ cw: CGFloat) -> some View {
         LazyVStack(spacing: 12) {
             if todayTasks.isEmpty {
                 VStack(spacing: 16) {
                     Image(systemName: "checkmark.circle")
-                        .font(.system(size: 60)).foregroundColor(.secondary.opacity(0.3))
-                    Text("No tasks for today").font(.custom("Georgia", size: 18)).foregroundColor(.secondary)
+                        .font(.system(size: scaledFont(60, width: cw)))
+                        .foregroundColor(.secondary.opacity(0.3))
+                    Text("No tasks for today")
+                        .font(.custom("Georgia", size: scaledFont(18, width: cw)))
+                        .foregroundColor(.secondary)
                     Text("Add your first task above to get started")
-                        .font(.custom("Georgia", size: 14)).italic().foregroundColor(.secondary)
+                        .font(.custom("Georgia", size: scaledFont(14, width: cw)))
+                        .italic().foregroundColor(.secondary)
                 }
                 .frame(maxWidth: .infinity).padding(48)
             } else {
                 ForEach(Array(todayTasks.enumerated()), id: \.element.id) { idx, task in
-                    DailyPlanTaskRow(task: task,
-                            onToggle: { toggle(idx) },
-                            onDelete: { delete(idx) })
+                    DailyPlanTaskRow(
+                        cw: cw,
+                        task: task,
+                        onToggle: { toggle(idx) },
+                        onDelete: { delete(idx) }
+                    )
                 }
             }
         }
     }
 
-    // MARK: - Floating rollers
-    private var timeRoller: some View {
-        HStack(spacing: 16) {
+    // ========================================================
+    // MARK: - Pickers
+    // ========================================================
+    private func timeRoller(_ cw: CGFloat) -> some View {
+        let rollerWidth: CGFloat  = cw > LayoutHelper.iPadBreakpoint ? 80 : 64
+        let rollerHeight: CGFloat = cw > LayoutHelper.iPadBreakpoint ? 140 : 120
+
+        return HStack(spacing: 16) {
             VStack {
-                Text("Hour").font(.system(size: 12, weight: .medium)).foregroundColor(.secondary)
+                Text("Hour")
+                    .font(.system(size: scaledFont(12, width: cw), weight: .medium))
+                    .foregroundColor(.secondary)
                 Picker("Hour", selection: $selectedHour) {
                     ForEach(1...12, id: \.self) { Text("\($0)").tag($0) }
                 }
                 .pickerStyle(.wheel)
-                .frame(width: 64, height: 120)
+                .frame(width: rollerWidth, height: rollerHeight)
             }
             VStack {
-                Text("Minute").font(.system(size: 12, weight: .medium)).foregroundColor(.secondary)
+                Text("Minute")
+                    .font(.system(size: scaledFont(12, width: cw), weight: .medium))
+                    .foregroundColor(.secondary)
                 Picker("Minute", selection: $selectedMinute) {
                     ForEach(0..<60, id: \.self) { Text(String(format: "%02d", $0)).tag($0) }
                 }
                 .pickerStyle(.wheel)
-                .frame(width: 64, height: 120)
+                .frame(width: rollerWidth, height: rollerHeight)
             }
             VStack {
-                Text("AM/PM").font(.system(size: 12, weight: .medium)).foregroundColor(.secondary)
+                Text("AM/PM")
+                    .font(.system(size: scaledFont(12, width: cw), weight: .medium))
+                    .foregroundColor(.secondary)
                 Picker("AM/PM", selection: $selectedAMPM) {
-                    Text("AM").tag("AM")
-                    Text("PM").tag("PM")
+                    Text("AM").tag("AM"); Text("PM").tag("PM")
                 }
                 .pickerStyle(.wheel)
-                .frame(width: 72, height: 120)
+                .frame(width: rollerWidth + 8, height: rollerHeight)
             }
         }
     }
 
-    private var durationRoller: some View {
-        HStack(spacing: 16) {
+    private func durationRoller(_ cw: CGFloat) -> some View {
+        let rollerWidth: CGFloat  = cw > LayoutHelper.iPadBreakpoint ? 90 : 72
+        let rollerHeight: CGFloat = cw > LayoutHelper.iPadBreakpoint ? 140 : 120
+
+        return HStack(spacing: 16) {
             VStack {
-                Text("Hours").font(.system(size: 12, weight: .medium)).foregroundColor(.secondary)
+                Text("Hours")
+                    .font(.system(size: scaledFont(12, width: cw), weight: .medium))
+                    .foregroundColor(.secondary)
                 Picker("Hours", selection: $selDurH) {
                     ForEach(0...12, id: \.self) { Text("\($0)h").tag($0) }
                 }
                 .pickerStyle(.wheel)
-                .frame(width: 72, height: 120)
+                .frame(width: rollerWidth, height: rollerHeight)
             }
             VStack {
-                Text("Minutes").font(.system(size: 12, weight: .medium)).foregroundColor(.secondary)
+                Text("Minutes")
+                    .font(.system(size: scaledFont(12, width: cw), weight: .medium))
+                    .foregroundColor(.secondary)
                 Picker("Minutes", selection: $selDurM) {
                     ForEach(0..<60, id: \.self) { Text("\($0)m").tag($0) }
                 }
                 .pickerStyle(.wheel)
-                .frame(width: 72, height: 120)
+                .frame(width: rollerWidth, height: rollerHeight)
             }
         }
     }
 
-    // MARK: - Data (unchanged from your version)
+    // ========================================================
+    // MARK: - Data
+    // ========================================================
     private func load() {
         guard authManager.isAuthenticated else {
             print("❌ User not authenticated, skipping load")
@@ -524,10 +578,15 @@ struct DailyPlanView: View {
     private func show(_ msg: String) { error = msg; showErr = true }
 }
 
-// MARK: - WeekDayView
+// ============================================================
+// MARK: - WeekDayView (uses cw for consistent fonts)
+// ============================================================
 struct WeekDayView: View {
+    let cw: CGFloat
     let date: Date
     let isSelected: Bool
+    let width: CGFloat
+    let height: CGFloat
     let tap: () -> Void
 
     @EnvironmentObject var themeManager: ThemeManager
@@ -536,15 +595,16 @@ struct WeekDayView: View {
         Button(action: tap) {
             VStack(spacing: 4) {
                 Text(date.formatted(.dateTime.weekday(.abbreviated)))
-                    .font(.custom("Georgia", size: 12))
+                    .font(.custom("Georgia", size: scaledFont(12, width: cw)))
                     .foregroundColor(isSelected ? .white : .secondary)
 
                 Text(date.formatted(.dateTime.day()))
-                    .font(.custom("Georgia", size: 16)).fontWeight(.bold)
+                    .font(.custom("Georgia", size: scaledFont(16, width: cw)))
+                    .fontWeight(.bold)
                     .foregroundColor(isSelected ? .white :
                         (themeManager.colorScheme == .dark ? .white : Color(red: 0.23, green: 0.23, blue: 0.23)))
             }
-            .frame(width: 40, height: 50)
+            .frame(width: width, height: height)
             .background(
                 RoundedRectangle(cornerRadius: 999)
                     .fill(isSelected ? themeManager.accentColor : .clear)
@@ -554,8 +614,11 @@ struct WeekDayView: View {
     }
 }
 
-// MARK: - Task Row
+// ============================================================
+// MARK: - Task Row (uses cw for consistent fonts)
+// ============================================================
 struct DailyPlanTaskRow: View {
+    let cw: CGFloat
     let task: DailyPlanTask
     let onToggle: () -> Void
     let onDelete: () -> Void
@@ -566,7 +629,6 @@ struct DailyPlanTaskRow: View {
     var cardBG: Color {
         themeManager.colorScheme == .dark ? Color(red: 0.18, green: 0.18, blue: 0.18) : .white
     }
-
     var txt: Color {
         themeManager.colorScheme == .dark ? Color(red: 0.94, green: 0.94, blue: 0.94) :
                           Color(red: 0.23, green: 0.23, blue: 0.23)
@@ -594,14 +656,14 @@ struct DailyPlanTaskRow: View {
 
                     VStack(alignment: .leading, spacing: 8) {
                         Text(task.text)
-                            .font(.custom("Georgia", size: 16))
+                            .font(.custom("Georgia", size: scaledFont(16, width: cw)))
                             .foregroundColor(task.done ? .secondary : txt)
                             .strikethrough(task.done)
                             .frame(maxWidth: .infinity, alignment: .leading)
 
                         HStack(spacing: 8) {
-                            if let t = displayTime, !t.isEmpty { Tag(t) }
-                            if let d = task.duration, !d.isEmpty { Tag(d) }
+                            if let t = displayTime, !t.isEmpty { Tag(cw, t) }
+                            if let d = task.duration, !d.isEmpty { Tag(cw, d) }
                         }
                     }
                     Spacer()
@@ -625,7 +687,7 @@ struct DailyPlanTaskRow: View {
             .onHover { hover = $0 }
             #endif
         }
-        .padding(20)
+        .padding(LayoutHelper.responsivePadding(for: cw))
         .background(cardBG)
         .cornerRadius(12)
         .shadow(color: .black.opacity(0.08), radius: 3, x: 0, y: 1)
@@ -636,9 +698,9 @@ struct DailyPlanTaskRow: View {
         #endif
     }
 
-    @ViewBuilder private func Tag(_ txt: String) -> some View {
-        Text(txt)
-            .font(.custom("Georgia", size: 14))
+    @ViewBuilder private func Tag(_ cw: CGFloat, _ text: String) -> some View {
+        Text(text)
+            .font(.custom("Georgia", size: scaledFont(14, width: cw)))
             .foregroundColor(themeManager.colorScheme == .dark ?
                 Color(red: 0.8, green: 0.8, blue: 0.8) :
                 Color(red: 0.33, green: 0.33, blue: 0.33))

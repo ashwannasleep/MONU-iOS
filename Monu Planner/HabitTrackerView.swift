@@ -812,8 +812,8 @@ struct HabitTrackerView: View {
                 BackButton()
                 Spacer()
             }
-            .padding(.horizontal, 20)
-            .padding(.top, 48)
+            .padding(.horizontal, LayoutHelper.responsivePadding(for: LayoutHelper.screenWidth))
+            .padding(.top, LayoutHelper.isIPad ? 60 : 48)
             
             Button { navigationManager.navigateToRoot() } label: {
                 Text("MONU")

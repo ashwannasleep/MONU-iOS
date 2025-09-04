@@ -46,7 +46,7 @@ struct DashboardView: View {
                             Text(error)
                                 .font(.system(size: 13, design: .serif))
                                 .foregroundColor(.red)
-                                .padding(.horizontal, 20)
+                                .padding(.horizontal, LayoutHelper.responsivePadding(for: LayoutHelper.screenWidth))
                                 .padding(.vertical, 12)
                                 .background(themeManager.colorScheme == .dark ? Color.red.opacity(0.15) : Color.red.opacity(0.08))
                                 .cornerRadius(10)
@@ -119,8 +119,8 @@ struct DashboardView: View {
                 BackButton()
                 Spacer()
             }
-            .padding(.horizontal, 20)
-            .padding(.top, 48)
+            .padding(.horizontal, LayoutHelper.responsivePadding(for: LayoutHelper.screenWidth))
+            .padding(.top, LayoutHelper.isIPad ? 60 : 48)
             
             Button { navigationManager.navigateToRoot() } label: {
                 Text("MONU")

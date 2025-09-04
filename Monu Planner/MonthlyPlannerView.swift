@@ -65,17 +65,17 @@ struct MonthlyPlannerView: View {
                 ScrollView {
                     VStack(spacing: 24) {
                         connectionStatusSection
-                            .padding(.horizontal, 20)
+                            .padding(.horizontal, LayoutHelper.responsivePadding(for: LayoutHelper.screenWidth))
                         
                         if sync.hasAnyConnection {
                             viewModeSelector
-                                .padding(.horizontal, 20)
+                                .padding(.horizontal, LayoutHelper.responsivePadding(for: LayoutHelper.screenWidth))
                             
                             calendarView
-                                .padding(.horizontal, 20)
+                                .padding(.horizontal, LayoutHelper.responsivePadding(for: LayoutHelper.screenWidth))
                         } else {
                             welcomeSection
-                                .padding(.horizontal, 20)
+                                .padding(.horizontal, LayoutHelper.responsivePadding(for: LayoutHelper.screenWidth))
                         }
                     }
                     .padding(.bottom, 40)
@@ -105,8 +105,8 @@ struct MonthlyPlannerView: View {
                 BackButton()
                 Spacer()
             }
-            .padding(.horizontal, 20)
-            .padding(.top, 48)
+            .padding(.horizontal, LayoutHelper.responsivePadding(for: LayoutHelper.screenWidth))
+            .padding(.top, LayoutHelper.isIPad ? 60 : 48)
             
             Button(action: {
                 navigationManager.navigateToRoot()

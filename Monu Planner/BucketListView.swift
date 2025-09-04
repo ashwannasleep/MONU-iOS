@@ -98,13 +98,13 @@ struct BucketListView: View {
                 VStack(spacing: 0) {
                     headerView
                     progressView
-                        .padding(.horizontal, 20)
+                        .padding(.horizontal, LayoutHelper.responsivePadding(for: LayoutHelper.screenWidth))
                         .padding(.bottom, 24)
                     inputSection
-                        .padding(.horizontal, 20)
+                        .padding(.horizontal, LayoutHelper.responsivePadding(for: LayoutHelper.screenWidth))
                         .padding(.bottom, 24)
                     itemsList
-                        .padding(.horizontal, 20)
+                        .padding(.horizontal, LayoutHelper.responsivePadding(for: LayoutHelper.screenWidth))
                         .padding(.bottom, 40)
                 }
             }
@@ -143,8 +143,8 @@ struct BucketListView: View {
                 BackButton()
                 Spacer()
             }
-            .padding(.horizontal, 20)
-            .padding(.top, 48)
+            .padding(.horizontal, LayoutHelper.responsivePadding(for: LayoutHelper.screenWidth))
+            .padding(.top, LayoutHelper.isIPad ? 60 : 48)
             
             Button(action: { navigationManager.navigateToRoot() }) {
                 Text("MONU")
