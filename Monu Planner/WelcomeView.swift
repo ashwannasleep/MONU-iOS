@@ -3,9 +3,6 @@ import SwiftUI
 struct WelcomeView: View {
     @EnvironmentObject var themeManager: ThemeManager
     @State private var currentStep = 0
-    @State private var animateElements = false
-    @State private var showNextStep = false
-    @State private var pulseAnimation = false
     @State private var showMainApp = false
     
     let welcomeSteps = [
@@ -56,11 +53,8 @@ struct WelcomeView: View {
                     
                     // Main content
                     VStack(spacing: 40) {
-                        // Icon with animation
+                        // Icon
                         iconView
-                            .scaleEffect(animateElements ? 1.0 : 0.5)
-                            .opacity(animateElements ? 1.0 : 0.0)
-                            .animation(.spring(response: 0.8, dampingFraction: 0.6), value: animateElements)
                         
                         // Text content
                         VStack(spacing: 16) {
@@ -69,18 +63,12 @@ struct WelcomeView: View {
                                 .fontWeight(.bold)
                                 .foregroundColor(themeManager.textColor)
                                 .multilineTextAlignment(.center)
-                                .opacity(animateElements ? 1.0 : 0.0)
-                                .offset(y: animateElements ? 0 : 20)
-                                .animation(.easeOut(duration: 0.6).delay(0.2), value: animateElements)
                             
                             Text(welcomeSteps[currentStep].subtitle)
                                 .font(.custom("Georgia", size: 18))
                                 .fontWeight(.medium)
                                 .foregroundColor(themeManager.accentColor)
                                 .multilineTextAlignment(.center)
-                                .opacity(animateElements ? 1.0 : 0.0)
-                                .offset(y: animateElements ? 0 : 20)
-                                .animation(.easeOut(duration: 0.6).delay(0.4), value: animateElements)
                             
                             Text(welcomeSteps[currentStep].description)
                                 .font(.custom("Georgia", size: 16))
@@ -89,25 +77,17 @@ struct WelcomeView: View {
                                 .lineLimit(nil)
                                 .fixedSize(horizontal: false, vertical: true)
                                 .padding(.horizontal, 40)
-                                .opacity(animateElements ? 1.0 : 0.0)
-                                .offset(y: animateElements ? 0 : 20)
-                                .animation(.easeOut(duration: 0.6).delay(0.6), value: animateElements)
                         }
                         
                         Spacer()
                         
                         // Navigation buttons
                         navigationButtons
-                            .opacity(animateElements ? 1.0 : 0.0)
-                            .animation(.easeOut(duration: 0.6).delay(0.8), value: animateElements)
                     }
                     .padding(.horizontal, 20)
                     .padding(.bottom, 60)
                 }
             }
-        }
-        .onAppear {
-            startAnimations()
         }
     }
     
@@ -131,8 +111,6 @@ struct WelcomeView: View {
                 Circle()
                     .fill(index == currentStep ? themeManager.accentColor : themeManager.secondaryTextColor.opacity(0.3))
                     .frame(width: 8, height: 8)
-                    .scaleEffect(index == currentStep ? 1.2 : 1.0)
-                    .animation(.spring(response: 0.3), value: currentStep)
             }
         }
     }
@@ -144,8 +122,6 @@ struct WelcomeView: View {
             Circle()
                 .fill(welcomeSteps[currentStep].color.color.opacity(0.1))
                 .frame(width: 120, height: 120)
-                .scaleEffect(pulseAnimation ? 1.1 : 1.0)
-                .animation(.easeInOut(duration: 2.0).repeatForever(autoreverses: true), value: pulseAnimation)
             
             // Icon
             Image(systemName: welcomeSteps[currentStep].icon)
@@ -159,10 +135,7 @@ struct WelcomeView: View {
         HStack(spacing: 20) {
             if currentStep > 0 {
                 Button("Back") {
-                    withAnimation(.easeInOut(duration: 0.3)) {
-                        currentStep -= 1
-                        startAnimations()
-                    }
+                    currentStep -= 1
                 }
                 .buttonStyle(SecondaryButtonStyle())
             }
@@ -175,10 +148,7 @@ struct WelcomeView: View {
                     UserDefaults.standard.set(true, forKey: "hasSeenWelcome")
                     NotificationCenter.default.post(name: .welcomeCompleted, object: nil)
                 } else {
-                    withAnimation(.easeInOut(duration: 0.3)) {
-                        currentStep += 1
-                        startAnimations()
-                    }
+                    currentStep += 1
                 }
             }
             .buttonStyle(PrimaryButtonStyle())
@@ -186,16 +156,6 @@ struct WelcomeView: View {
         .padding(.horizontal, 20)
     }
     
-    // MARK: - Animation Functions
-    private func startAnimations() {
-        animateElements = false
-        pulseAnimation = false
-        
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            animateElements = true
-            pulseAnimation = true
-        }
-    }
 }
 
 // MARK: - Welcome Step Model
@@ -221,7 +181,6 @@ struct PrimaryButtonStyle: ButtonStyle {
             .background(themeManager.accentColor)
             .cornerRadius(12)
             .scaleEffect(configuration.isPressed ? 0.95 : 1.0)
-            .animation(.easeInOut(duration: 0.1), value: configuration.isPressed)
     }
 }
 
@@ -242,6 +201,5 @@ struct SecondaryButtonStyle: ButtonStyle {
                     .stroke(themeManager.accentColor, lineWidth: 1)
             )
             .scaleEffect(configuration.isPressed ? 0.95 : 1.0)
-            .animation(.easeInOut(duration: 0.1), value: configuration.isPressed)
     }
 } 

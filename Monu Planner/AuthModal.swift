@@ -12,6 +12,7 @@ struct AuthModal: View {
     @State private var fullName = ""
     @State private var resetCode = ""
     @State private var newPassword = ""
+    @State private var verificationCode = ""
     @State private var message = ""
     @State private var loading = false
 
@@ -22,6 +23,7 @@ struct AuthModal: View {
     enum AuthMode: String, CaseIterable {
         case signIn = "Sign In"
         case signUp = "Sign Up"
+        case verification = "Verify Account"
         case forgotPassword = "Forgot Password"
         case resetPassword = "Reset Password"
     }
@@ -162,12 +164,22 @@ struct AuthModal: View {
                 AuthTextField(placeholder: "Reset Code", text: $resetCode, keyboardType: .default)
                 AuthTextField(placeholder: "New Password", text: $newPassword, isSecure: true)
             }
+            if mode == .verification {
+                Text("We've sent a verification code to **\(email)**. Please enter it:")
+                    .font(.custom("Georgia", size: 14))
+                    .foregroundColor(themeManager.colorScheme == .dark ? .white : Color(red: 0.23, green: 0.23, blue: 0.23))
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+
+                AuthTextField(placeholder: "Verification Code", text: $verificationCode, keyboardType: .numberPad)
+            }
         }
     }
 
     // MARK: - Computed
     private var shouldShowSubmitButton: Bool {
-        mode == .signIn || mode == .signUp || mode == .resetPassword
+        mode == .signIn || mode == .signUp || mode == .resetPassword || mode == .verification
     }
 
     private var submitButtonTitle: String {
@@ -175,6 +187,7 @@ struct AuthModal: View {
         switch mode {
         case .signIn: return "Sign In"
         case .signUp: return "Sign Up"
+        case .verification: return "Verify"
         case .resetPassword: return "Reset Password"
         case .forgotPassword: return ""
         }
@@ -186,6 +199,8 @@ struct AuthModal: View {
             return emailTrimmed.isEmpty || password.isEmpty
         case .signUp:
             return emailTrimmed.isEmpty || password.isEmpty
+        case .verification:
+            return verificationCode.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         case .resetPassword:
             return emailTrimmed.isEmpty
                 || resetCode.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -198,7 +213,7 @@ struct AuthModal: View {
     private var emailTrimmed: String { email.trimmingCharacters(in: .whitespacesAndNewlines) }
 
     private func resetAll() {
-        email = ""; password = ""; fullName = ""; resetCode = ""; newPassword = ""; message = ""
+        email = ""; password = ""; fullName = ""; resetCode = ""; newPassword = ""; verificationCode = ""; message = ""
     }
 
     // MARK: - Actions
@@ -234,6 +249,16 @@ struct AuthModal: View {
         do {
             switch mode {
             case .signIn:
+                // Check if already signed in to avoid invalid state error
+                let currentSession = try await Amplify.Auth.fetchAuthSession()
+                if currentSession.isSignedIn {
+                    await MainActor.run {
+                        loading = false
+                        message = "You are already signed in. Please refresh the app."
+                    }
+                    return
+                }
+                
                 let res = try await Amplify.Auth.signIn(username: emailTrimmed, password: password)
                 if res.isSignedIn {
                     UserDefaults.standard.set(emailTrimmed, forKey: "user_email")
@@ -268,7 +293,8 @@ struct AuthModal: View {
                 case .confirmUser: // destination type varies by SDK; don't pattern-match fields
                     await MainActor.run {
                         loading = false
-                        message = "We sent a verification code. Check your inbox or SMS and enter it to finish sign up."
+                        mode = .verification
+                        message = ""
                     }
 
                 case .done:
@@ -287,12 +313,44 @@ struct AuthModal: View {
                 @unknown default:
                     await MainActor.run {
                         loading = false
-                        message = "Check your email for a verification code to complete sign up."
+                        mode = .verification
+                        message = ""
                     }
                 }
 
             case .forgotPassword:
                 break // handled in handleSendCode()
+
+            case .verification:
+                _ = try await Amplify.Auth.confirmSignUp(
+                    for: emailTrimmed,
+                    confirmationCode: verificationCode.trimmingCharacters(in: .whitespacesAndNewlines)
+                )
+                
+                // Check if already signed in to avoid invalid state error
+                let currentSession = try await Amplify.Auth.fetchAuthSession()
+                if currentSession.isSignedIn {
+                    await MainActor.run {
+                        loading = false
+                        let displayName = UserDefaults.standard.string(forKey: "monu_name") ?? emailTrimmed
+                        onSignUp(emailTrimmed, password, displayName)
+                        dismiss(); onClose()
+                    }
+                    return
+                }
+                
+                let signInRes = try await Amplify.Auth.signIn(username: emailTrimmed, password: password)
+                await MainActor.run {
+                    loading = false
+                    if signInRes.isSignedIn {
+                        let displayName = UserDefaults.standard.string(forKey: "monu_name") ?? emailTrimmed
+                        onSignUp(emailTrimmed, password, displayName)
+                        dismiss(); onClose()
+                    } else {
+                        message = "Account verified. Please sign in."
+                        mode = .signIn
+                    }
+                }
 
             case .resetPassword:
                 _ = try await Amplify.Auth.confirmResetPassword(
@@ -337,7 +395,7 @@ struct AuthModal: View {
                 return message.isEmpty ? "Something went wrong. Please try again." : message
 
             case .invalidState:
-                return "Something went wrong with the current auth state. Please try again."
+                return "Authentication state conflict detected. Please sign out and try again, or restart the app."
             case .notAuthorized:
                 return "Incorrect email or password. Try again or reset your password."
             default:
@@ -355,7 +413,7 @@ struct AuthTextField: View {
     var keyboardType: AuthKeyboardType = .default
     var isSecure: Bool = false
 
-    enum AuthKeyboardType { case `default`, emailAddress }
+    enum AuthKeyboardType { case `default`, emailAddress, numberPad }
 
     @EnvironmentObject var themeManager: ThemeManager
 
@@ -391,6 +449,7 @@ struct AuthTextField: View {
         switch keyboardType {
         case .default: return .default
         case .emailAddress: return .emailAddress
+        case .numberPad: return .numberPad
         }
     }
     #endif

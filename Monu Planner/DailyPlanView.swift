@@ -177,7 +177,7 @@ struct DailyPlanView: View {
                         VStack(spacing: 0) {
                             header(cw)
                             weekStrip(cw, horizontalPadding: pad)
-                                .padding(.bottom, spacing)
+                                .padding(.bottom, spacing * 0.5)
 
                             dateProgress(cw)
                                 .padding(.horizontal, pad)
@@ -214,7 +214,7 @@ struct DailyPlanView: View {
                             if showTimePicker { timeRoller(cw) } else { durationRoller(cw) }
                         }
                         .padding(pad)
-                        .frame(maxWidth: min(maxContentWidth(for: cw, padding: pad) * 0.85, 420))
+                        .frame(maxWidth: min(maxContentWidth(for: cw, padding: pad) * 0.95, 500))
                         .background(themeManager.cardBackgroundColor)
                         .cornerRadius(14)
                         .shadow(color: .black.opacity(0.2), radius: 16, x: 0, y: 8)
@@ -251,7 +251,7 @@ struct DailyPlanView: View {
                 Spacer()
             }
             .padding(.horizontal, LayoutHelper.responsivePadding(for: cw))
-            .padding(.top, 12)
+            .padding(.top, LayoutHelper.isIPad ? 60 : 48)
 
             Button { navigationManager.navigateToRoot() } label: {
                 Text("MONU")
@@ -283,26 +283,23 @@ struct DailyPlanView: View {
 
         let columnWidth = maxContentWidth(for: cw, padding: pad)
         let inner = columnWidth - pad * 2
-        let gap: CGFloat =  LayoutHelper.responsiveSpacing(for: cw) * 0.66
+        let gap: CGFloat =  LayoutHelper.responsiveSpacing(for: cw) * 0.4
         // 7 items + 6 gaps
         let pillWidth = max(38, min(56, (inner - gap * 6) / 7))
         let pillHeight = pillWidth + (cw > LayoutHelper.iPadBreakpoint ? 8 : 4)
 
-        return HStack(spacing: 0) {
-            Spacer(minLength: 0)
-            HStack(spacing: gap) {
-                ForEach(days, id: \.self) { d in
-                    WeekDayView(
-                        cw: cw,
-                        date: d,
-                        isSelected: cal.isDate(d, inSameDayAs: selectedDate),
-                        width: pillWidth,
-                        height: pillHeight
-                    ) { selectedDate = d }
-                }
+        return HStack(spacing: gap) {
+            ForEach(days, id: \.self) { d in
+                WeekDayView(
+                    cw: cw,
+                    date: d,
+                    isSelected: cal.isDate(d, inSameDayAs: selectedDate),
+                    width: pillWidth,
+                    height: pillHeight
+                ) { selectedDate = d }
             }
-            Spacer(minLength: 0)
         }
+        .padding(.horizontal, LayoutHelper.responsivePadding(for: cw))
     }
 
     // ========================================================
@@ -434,7 +431,7 @@ struct DailyPlanView: View {
     // MARK: - Pickers
     // ========================================================
     private func timeRoller(_ cw: CGFloat) -> some View {
-        let rollerWidth: CGFloat  = cw > LayoutHelper.iPadBreakpoint ? 80 : 64
+        let rollerWidth: CGFloat  = cw > LayoutHelper.iPadBreakpoint ? 80 : 70
         let rollerHeight: CGFloat = cw > LayoutHelper.iPadBreakpoint ? 140 : 120
 
         return HStack(spacing: 16) {
@@ -472,7 +469,7 @@ struct DailyPlanView: View {
     }
 
     private func durationRoller(_ cw: CGFloat) -> some View {
-        let rollerWidth: CGFloat  = cw > LayoutHelper.iPadBreakpoint ? 90 : 72
+        let rollerWidth: CGFloat  = cw > LayoutHelper.iPadBreakpoint ? 90 : 80
         let rollerHeight: CGFloat = cw > LayoutHelper.iPadBreakpoint ? 140 : 120
 
         return HStack(spacing: 16) {
