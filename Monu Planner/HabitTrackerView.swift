@@ -885,15 +885,15 @@ struct HabitTrackerView: View {
     
     // MARK: - Stats
     private var modernStatsSection: some View {
-        HStack(spacing: 16) {
-            ModernStatCard(title: "Total Streak", value: "\(totalStreak)", icon: "🔥",
+        HStack(spacing: 12) {
+            ModernStatCard(title: "Total Streak", value: "\(totalStreak)", icon: "",
                            gradient: LinearGradient(gradient: Gradient(colors: [themeManager.accentColor, themeManager.accentColor.opacity(0.7)]), startPoint: .topLeading, endPoint: .bottomTrailing))
-            ModernStatCard(title: "Completions", value: "\(totalCompletions)", icon: "✅",
+            ModernStatCard(title: "Completions", value: "\(totalCompletions)", icon: "",
                            gradient: LinearGradient(gradient: Gradient(colors: [themeManager.accentColor, themeManager.accentColor.opacity(0.7)]), startPoint: .topLeading, endPoint: .bottomTrailing))
-            ModernStatCard(title: "Active Habits", value: "\(habits.count)", icon: "📊",
+            ModernStatCard(title: "Active Habits", value: "\(habits.count)", icon: "",
                            gradient: LinearGradient(gradient: Gradient(colors: [themeManager.accentColor, themeManager.accentColor.opacity(0.7)]), startPoint: .topLeading, endPoint: .bottomTrailing))
         }
-        .padding(.bottom, 24)
+        .padding(.bottom, 16)
     }
     
     // MARK: - Category Filter
@@ -1092,16 +1092,19 @@ struct ModernStatCard: View {
     @EnvironmentObject var themeManager: ThemeManager
     
     var body: some View {
-        VStack(spacing: 12) {
-            Text(icon).font(.system(size: 24))
-            VStack(spacing: 4) {
-                Text(value).font(.custom("Georgia", size: 20)).fontWeight(.bold).foregroundColor(themeManager.textColor)
-                Text(title).font(.system(size: 12, weight: .medium)).foregroundColor(.secondary).multilineTextAlignment(.center).lineLimit(nil).fixedSize(horizontal: false, vertical: true)
+        VStack(spacing: 8) {
+            if !icon.isEmpty {
+                Text(icon).font(.system(size: 20))
+            }
+            VStack(spacing: 2) {
+                Text(value).font(.custom("Georgia", size: 18)).fontWeight(.bold).foregroundColor(themeManager.textColor)
+                Text(title).font(.system(size: 11, weight: .medium)).foregroundColor(.secondary).multilineTextAlignment(.center).lineLimit(2)
             }
         }
         .frame(maxWidth: .infinity)
-        .padding(20)
-        .background(RoundedRectangle(cornerRadius: 16).fill(themeManager.cardBackgroundColor).shadow(color: Color.black.opacity(0.06), radius: 8, x: 0, y: 4))
+        .frame(height: 80)
+        .padding(12)
+        .background(RoundedRectangle(cornerRadius: 12).fill(themeManager.cardBackgroundColor).shadow(color: Color.black.opacity(0.06), radius: 6, x: 0, y: 3))
     }
 }
 

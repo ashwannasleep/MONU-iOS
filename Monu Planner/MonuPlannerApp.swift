@@ -326,14 +326,6 @@ struct MonuPlannerApp: App {
                 .environmentObject(aiInsightsManager)
                 .environmentObject(themeManager)
                 .environmentObject(calendarSyncManager)
-        case .userGuide:
-            UserGuideView()
-                .environmentObject(authManager)
-                .environmentObject(navigationManager)
-                .environmentObject(notificationManager)
-                .environmentObject(aiInsightsManager)
-                .environmentObject(themeManager)
-                .environmentObject(calendarSyncManager)
         case .settings:
             SettingsPage()
                 .environmentObject(authManager)

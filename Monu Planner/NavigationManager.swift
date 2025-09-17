@@ -12,7 +12,6 @@ enum NavigationDestination: Hashable {
     case futureVision
     case bucketList
     case pomodoro
-    case userGuide
     case settings
 }
 
@@ -29,7 +28,6 @@ struct NavigationContainer {
             case futureVision
             case bucketList
             case pomodoro
-            case userGuide
             case settings
         }
     }

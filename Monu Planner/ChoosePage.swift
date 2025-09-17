@@ -17,8 +17,7 @@ struct ChoosePageView: View {
             ModuleItem(title: "Habits", description: "Build your habits with structure.", destination: Destination.habitTracker),
             ModuleItem(title: "Future Vision", description: "Dream and map your long‑term goals.", destination: Destination.futureVision),
             ModuleItem(title: "Bucket List", description: "List your big life goals & fun ideas.", destination: Destination.bucketList),
-            ModuleItem(title: "Pomodoro", description: "Work with rhythm. Breathe between tasks.", destination: Destination.pomodoro),
-            ModuleItem(title: "User Guide", description: "Your guide to mindful planning with MONU.", destination: Destination.userGuide)
+            ModuleItem(title: "Pomodoro", description: "Work with rhythm. Breathe between tasks.", destination: Destination.pomodoro)
         ]
     }
     
