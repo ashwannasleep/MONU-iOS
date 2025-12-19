@@ -44,36 +44,41 @@ struct PomodoroView: View {
     }
 
     var body: some View {
-        ZStack {
-            themeManager.backgroundColor.ignoresSafeArea()
-            VStack(spacing: 0) {
-                // Header
-                headerView
+        GeometryReader { geo in
+            let screenWidth = geo.size.width
+            let responsivePadding = LayoutHelper.responsivePadding(for: screenWidth)
+            
+            ZStack {
+                themeManager.backgroundColor.ignoresSafeArea()
+                VStack(spacing: 0) {
+                    // Header
+                    headerView
 
-                // Activity selector
-                activitySelectorView
+                    // Activity selector
+                    activitySelectorView
 
-                Spacer()
+                    Spacer()
 
-                // Timer display
-                timerDisplayView
+                    // Timer display
+                    timerDisplayView(screenWidth: screenWidth)
 
-                Spacer()
+                    Spacer()
 
-                // Time input
-                timeInputView
-                    .padding(.top, 20)
+                    // Time input
+                    timeInputView
+                        .padding(.top, 20)
 
-                // Controls
-                controlButtonsView
-                    .padding(.top, 20)
+                    // Controls
+                    controlButtonsView
+                        .padding(.top, 20)
 
-                Spacer()
+                    Spacer()
 
-                // Stats
-                statsView
+                    // Stats
+                    statsView
+                }
+                .padding(.horizontal, responsivePadding)
             }
-            .padding(.horizontal, 24)
         }
         .navigationBarHidden(true)
         .onAppear {
@@ -126,52 +131,64 @@ struct PomodoroView: View {
 
     // MARK: - Activity selector
     private var activitySelectorView: some View {
-        HStack(spacing: 12) {
-            ForEach(ActivityType.allCases, id: \.self) { activity in
-                Button(action: {
-                    selectedActivity = activity
-                    storedActivityRaw = activity.rawValue
-                }) {
-                    Text(activity.rawValue)
-                        .font(.custom("Georgia", size: 14))
-                        .fontWeight(.medium)
-                        .foregroundColor(selectedActivity == activity ? .white : themeManager.textColor)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 8)
-                        .background(
-                            RoundedRectangle(cornerRadius: 20)
-                                .fill(selectedActivity == activity ? themeManager.accentColor : themeManager.cardBackgroundColor)
-                        )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 20)
-                                .stroke(themeManager.accentColor.opacity(0.3), lineWidth: 1)
-                        )
+        GeometryReader { geo in
+            let screenWidth = geo.size.width
+            let spacing: CGFloat = screenWidth > LayoutHelper.iPadBreakpoint ? 16 : 12
+            let fontSize: CGFloat = screenWidth > LayoutHelper.iPadBreakpoint ? 16 : 14
+            
+            HStack(spacing: spacing) {
+                ForEach(ActivityType.allCases, id: \.self) { activity in
+                    Button(action: {
+                        selectedActivity = activity
+                        storedActivityRaw = activity.rawValue
+                    }) {
+                        Text(activity.rawValue)
+                            .font(.custom("Georgia", size: fontSize))
+                            .fontWeight(.medium)
+                            .foregroundColor(selectedActivity == activity ? .white : themeManager.textColor)
+                            .padding(.horizontal, screenWidth > LayoutHelper.iPadBreakpoint ? 20 : 16)
+                            .padding(.vertical, 8)
+                            .background(
+                                RoundedRectangle(cornerRadius: 20)
+                                    .fill(selectedActivity == activity ? themeManager.accentColor : themeManager.cardBackgroundColor)
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 20)
+                                    .stroke(themeManager.accentColor.opacity(0.3), lineWidth: 1)
+                            )
+                    }
+                    .buttonStyle(PlainButtonStyle())
                 }
-                .buttonStyle(PlainButtonStyle())
             }
+            .frame(maxWidth: .infinity)
+            .padding(.horizontal, 20)
         }
-        .padding(.horizontal, 20)
+        .frame(height: 50)
     }
 
     // MARK: - Timer display
-    private var timerDisplayView: some View {
-        ZStack {
+    private func timerDisplayView(screenWidth: CGFloat) -> some View {
+        let circleSize: CGFloat = min(220, screenWidth * 0.6)
+        let fontSize: CGFloat = circleSize * 0.22
+        let lineWidth: CGFloat = max(6, circleSize * 0.035)
+        
+        return ZStack {
             // Progress ring background
             Circle()
-                .stroke(themeManager.cardBackgroundColor, lineWidth: 8)
-                .frame(width: 220, height: 220)
+                .stroke(themeManager.cardBackgroundColor, lineWidth: lineWidth)
+                .frame(width: circleSize, height: circleSize)
 
             // Progress ring
             Circle()
                 .trim(from: 0, to: progress)
-                .stroke(themeManager.accentColor, style: StrokeStyle(lineWidth: 8, lineCap: .round))
-                .frame(width: 220, height: 220)
+                .stroke(themeManager.accentColor, style: StrokeStyle(lineWidth: lineWidth, lineCap: .round))
+                .frame(width: circleSize, height: circleSize)
                 .rotationEffect(.degrees(-90))
                 .animation(.easeInOut(duration: 1), value: progress)
 
             // Time text
             Text(displayTime)
-                .font(.custom("Georgia", size: 48))
+                .font(.custom("Georgia", size: fontSize))
                 .foregroundColor(themeManager.textColor)
                 .monospacedDigit()
         }
@@ -226,27 +243,36 @@ struct PomodoroView: View {
 
     // MARK: - Controls
     private var controlButtonsView: some View {
-        HStack(spacing: 20) {
-            Button(isRunning ? "Pause" : "Start") {
-                isRunning ? pauseTimer() : startTimer()
-            }
-            .font(.custom("Georgia", size: 18))
-            .foregroundColor(.white)
-            .frame(minWidth: 100, minHeight: 44)
-            .background(
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(isRunning ? Color.orange : themeManager.accentColor)
-            )
-
-            Button("Reset") { resetTimer() }
-                .font(.custom("Georgia", size: 16))
-                .foregroundColor(themeManager.accentColor)
-                .frame(minWidth: 80, minHeight: 44)
+        GeometryReader { geo in
+            let screenWidth = geo.size.width
+            let isWide = screenWidth > LayoutHelper.iPadBreakpoint
+            let buttonWidth: CGFloat = isWide ? 140 : 120
+            let fontSize: CGFloat = isWide ? 20 : 18
+            
+            HStack(spacing: isWide ? 24 : 20) {
+                Button(isRunning ? "Pause" : "Start") {
+                    isRunning ? pauseTimer() : startTimer()
+                }
+                .font(.custom("Georgia", size: fontSize))
+                .foregroundColor(.white)
+                .frame(width: buttonWidth, height: 50)
                 .background(
                     RoundedRectangle(cornerRadius: 12)
-                        .stroke(themeManager.accentColor, lineWidth: 1.5)
+                        .fill(isRunning ? Color.orange : themeManager.accentColor)
                 )
+
+                Button("Reset") { resetTimer() }
+                    .font(.custom("Georgia", size: fontSize - 2))
+                    .foregroundColor(themeManager.accentColor)
+                    .frame(width: buttonWidth - 20, height: 50)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(themeManager.accentColor, lineWidth: 1.5)
+                    )
+            }
+            .frame(maxWidth: .infinity)
         }
+        .frame(height: 60)
     }
 
     // MARK: - Stats

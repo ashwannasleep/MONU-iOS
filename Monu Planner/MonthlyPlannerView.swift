@@ -1149,16 +1149,17 @@ struct EventRow: View {
     var body: some View {
         Button(action: onTap) {
             HStack(spacing: 12) {
-                // Time indicator
-                VStack(spacing: 4) {
+                // Time display
+                VStack(alignment: .leading, spacing: 4) {
                     Text(timeFormatter.string(from: event.start))
-                        .font(.system(size: 12, weight: .semibold, design: .default))
-                        .foregroundColor(.secondary)
+                        .font(.custom("Georgia", size: 14))
+                        .fontWeight(.medium)
+                        .foregroundColor(themeManager.textColor)
                     
                     if !event.isAllDay {
                         Text(timeFormatter.string(from: event.end))
-                            .font(.system(size: 10, weight: .medium, design: .default))
-                            .foregroundColor(.secondary)
+                            .font(.custom("Georgia", size: 12))
+                            .foregroundColor(themeManager.secondaryTextColor)
                     }
                 }
                 .frame(width: 60, alignment: .leading)
@@ -1166,14 +1167,16 @@ struct EventRow: View {
                 // Event content
                 VStack(alignment: .leading, spacing: 4) {
                     Text(event.title)
-                        .font(.system(size: 16, weight: .semibold, design: .default))
-                        .foregroundColor(.primary)
+                        .font(.custom("Georgia", size: 16))
+                        .fontWeight(.medium)
+                        .foregroundColor(themeManager.textColor)
                         .lineLimit(2)
+                        .multilineTextAlignment(.leading)
                     
                     if event.isAllDay {
                         Text("All Day")
-                            .font(.system(size: 12, weight: .medium, design: .default))
-                            .foregroundColor(.secondary)
+                            .font(.custom("Georgia", size: 12))
+                            .foregroundColor(themeManager.secondaryTextColor)
                     }
                 }
                 
@@ -1185,8 +1188,9 @@ struct EventRow: View {
                     .foregroundColor(event.provider == .apple ? .orange : themeManager.accentColor)
             }
             .padding(12)
-            .background(Color.gray.opacity(0.05))
+            .background(themeManager.cardBackgroundColor)
             .cornerRadius(8)
+            .shadow(color: .black.opacity(0.08), radius: 3, x: 0, y: 1)
         }
         .buttonStyle(PlainButtonStyle())
     }

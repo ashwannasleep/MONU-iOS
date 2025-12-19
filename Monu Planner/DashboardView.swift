@@ -15,7 +15,6 @@ struct DashboardView: View {
     @State private var bucketProgress: Int = 0
     @State private var dailyProgress: Int = 0
     @State private var yearlyProgress: Int = 0
-    @State private var futureProgress: Int = 0
     @State private var loading: Bool = false
     @State private var error: String?
 
@@ -54,32 +53,26 @@ struct DashboardView: View {
                                 .padding(.bottom, 20)
                         }
 
-                        // Progress Cards - Horizontal Row
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 16) {
-                                DashboardCard(
-                                    title: "Today Tasks",
-                                    progress: dailyProgress,
-                                    progressColor: themeManager.accentColor
-                                )
-                                DashboardCard(
-                                    title: "Yearly Goals",
-                                    progress: yearlyProgress,
-                                    progressColor: themeManager.accentColor
-                                )
-                                DashboardCard(
-                                    title: "Bucket List",
-                                    progress: bucketProgress,
-                                    progressColor: themeManager.accentColor
-                                )
-                                DashboardCard(
-                                    title: "Future Vision",
-                                    progress: futureProgress,
-                                    progressColor: themeManager.accentColor
-                                )
-                            }
-                            .padding(.horizontal, 24)
+                        // Progress Cards - Fixed Layout
+                        HStack(spacing: 12) {
+                            DashboardCard(
+                                title: "Today Tasks",
+                                progress: dailyProgress,
+                                progressColor: themeManager.accentColor
+                            )
+                            DashboardCard(
+                                title: "Yearly Goals",
+                                progress: yearlyProgress,
+                                progressColor: themeManager.accentColor
+                            )
+                            DashboardCard(
+                                title: "Bucket List",
+                                progress: bucketProgress,
+                                progressColor: themeManager.accentColor
+                            )
                         }
+                        .frame(maxWidth: .infinity)
+                        .padding(.horizontal, 16)
                         .padding(.bottom, 32)
 
                         // Focus Card
@@ -165,7 +158,6 @@ struct DashboardView: View {
             group.addTask { await fetchBucket() }
             group.addTask { await fetchDaily() }
             group.addTask { await fetchYearly() }
-            group.addTask { await fetchFuture() }
         }
 
         await MainActor.run { loading = false }
@@ -237,26 +229,6 @@ struct DashboardView: View {
         }
     }
 
-    private func fetchFuture() async {
-        guard authManager.isAuthenticated else { return }
-        do {
-            let result = try await Amplify.API.query(request: .list(FutureGoal.self))
-            switch result {
-            case .success(let goals):
-                let completed = goals.filter { $0.done == true }.count
-                let total = goals.count
-                let progress = total > 0 ? Int((Double(completed) / Double(total)) * 100) : 0
-                await MainActor.run {
-                    self.futureProgress = progress
-                    if self.error?.contains("future") == true { self.error = nil }
-                }
-            case .failure(let error):
-                await MainActor.run { self.error = "Failed to load future goals: \(error.localizedDescription)" }
-            }
-        } catch {
-            await MainActor.run { self.error = "Failed to load future goals: \(error.localizedDescription)" }
-        }
-    }
 }
 
 // MARK: - Dashboard Card
